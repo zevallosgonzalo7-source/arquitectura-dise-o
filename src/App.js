@@ -73,7 +73,7 @@ function App() {
   };
 
   const [vista, setVista] = useState('proyectos');
-  const [menuAbierto, setMenuAbierto] = useState(false); // Estado para abrir/cerrar sidebar en celular
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const [proyectos, setProyectos] = useState([]);
   const [listaClientes, setListaClientes] = useState([]);
   const [todosLosUsuarios, setTodosLosUsuarios] = useState([]);
@@ -81,6 +81,19 @@ function App() {
 
   const [filtroClienteAdmin, setFiltroClienteAdmin] = useState('');
   const [filtroAmbienteCliente, setFiltroAmbienteCliente] = useState('');
+
+  // Control de índices del carrusel por cada ambiente (clave: nombre de ambiente, valor: índice numérico)
+  const [indicesCarrusel, setIndicesCarrusel] = useState({});
+
+  const cambiarIndiceCarrusel = (ambiente, direccion, total) => {
+    setIndicesCarrusel(prev => {
+      const actual = prev[ambiente] || 0;
+      let nuevo = actual + direccion;
+      if (nuevo < 0) nuevo = total - 1;
+      if (nuevo >= total) nuevo = 0;
+      return { ...prev, [ambiente]: nuevo };
+    });
+  };
 
   const fetchClientes = useCallback(async () => {
     const { data, error } = await supabase
@@ -164,9 +177,9 @@ function App() {
     }
   };
 
-  // --- BORRAR PROYECTO ---
+  // --- BORRAR PROYECTO INDIVIDUAL ---
   const eliminarProyecto = async (id, titulo) => {
-    if (window.confirm(`¿Estás seguro de que deseas eliminar el proyecto "${titulo}"?`)) {
+    if (window.confirm(`¿Estás seguro de que deseas eliminar este render ("${titulo}")?`)) {
       setProyectos(prev => prev.filter(p => p.id !== id));
 
       const { error } = await supabase
@@ -175,7 +188,7 @@ function App() {
         .eq('id', id);
 
       if (error) {
-        alert('Error al eliminar el proyecto: ' + error.message);
+        alert('Error al eliminar el render: ' + error.message);
         fetchProyectos(true);
       }
     }
@@ -226,44 +239,50 @@ function App() {
     }
   };
 
-  // --- CAMBIAR ESTADO ---
-  const cambiarEstado = async (id, nuevoEstado) => {
+  // --- CAMBIAR ESTADO A TODOS LOS RENDERS DE UN AMBIENTE ---
+  const cambiarEstadoAmbiente = async (nombreAmbiente, nuevoEstado) => {
     setProyectos(prevProyectos => 
-      prevProyectos.map(p => p.id === id ? { ...p, estado: nuevoEstado } : p)
+      prevProyectos.map(p => (p.ambiente || 'General') === nombreAmbiente ? { ...p, estado: nuevoEstado } : p)
     );
 
     const { error } = await supabase
       .from('proyectos')
       .update({ estado: nuevoEstado })
-      .eq('id', id);
+      .eq('ambiente', nombreAmbiente);
 
     if (error) {
-      alert('Error al actualizar el estado: ' + error.message);
+      alert('Error al actualizar el estado del ambiente: ' + error.message);
       fetchProyectos(true);
     }
   };
 
-  // --- ENVIAR COMENTARIO ---
+  // --- ENVIAR COMENTARIO GENERAL AL AMBIENTE ---
   const [textosComentarios, setTextosComentarios] = useState({});
 
-  const enviarComentario = async (proyecto) => {
-    const textoNuevo = textosComentarios[proyecto.id];
+  const enviarComentarioAmbiente = async (nombreAmbiente, rendersAmbiente) => {
+    const textoNuevo = textosComentarios[nombreAmbiente];
     if (!textoNuevo || !textoNuevo.trim()) return;
 
-    const historialActual = proyecto.comentarios ? proyecto.comentarios + '\n---\n' : '';
+    // Tomamos como referencia el primer render del ambiente para acumular el historial global del ambiente
+    const renderRef = rendersAmbiente[0];
+    if (!renderRef) return;
+
+    const historialActual = renderRef.comentarios ? renderRef.comentarios + '\n---\n' : '';
     const fechaActual = new Date().toLocaleDateString();
     const comentarioCompleto = `${usuarioLogueado} (${fechaActual}) : ${textoNuevo.trim()}`;
     const nuevoHistorial = historialActual + comentarioCompleto;
 
+    // Actualizamos localmente todos los renders de este ambiente
     setProyectos(prevProyectos => 
-      prevProyectos.map(p => p.id === proyecto.id ? { ...p, comentarios: nuevoHistorial } : p)
+      prevProyectos.map(p => (p.ambiente || 'General') === nombreAmbiente ? { ...p, comentarios: nuevoHistorial } : p)
     );
-    setTextosComentarios({ ...textosComentarios, [proyecto.id]: '' });
+    setTextosComentarios({ ...textosComentarios, [nombreAmbiente]: '' });
 
+    // Actualizamos en Supabase para todos los renders de este ambiente
     const { error } = await supabase
       .from('proyectos')
       .update({ comentarios: nuevoHistorial })
-      .eq('id', proyecto.id);
+      .eq('ambiente', nombreAmbiente);
 
     if (error) {
       alert('Error al enviar el comentario: ' + error.message);
@@ -271,13 +290,21 @@ function App() {
     }
   };
 
-  // --- FILTRAR PROYECTOS POR AMBIENTE SELECCIONADO POR EL CLIENTE ---
-  const proyectosFiltradosPorAmbiente = proyectos.filter(p => {
+  // --- FILTRAR PROYECTOS ---
+  const proyectosFiltrados = proyectos.filter(p => {
     if (!filtroAmbienteCliente) return true;
     return p.ambiente?.toLowerCase() === filtroAmbienteCliente.toLowerCase();
   });
 
   const ambientesDisponibles = [...new Set(proyectos.map(p => p.ambiente || 'General'))];
+
+  // AGRUPAR PROYECTOS POR AMBIENTE
+  const ambientesAgrupados = proyectosFiltrados.reduce((acc, p) => {
+    const amb = p.ambiente || 'General';
+    if (!acc[amb]) acc[amb] = [];
+    acc[amb].push(p);
+    return acc;
+  }, {});
 
   // --- PANTALLA DE LOGIN ---
   if (!usuarioLogueado) {
@@ -339,7 +366,7 @@ function App() {
     );
   }
 
-  // --- INTERFAZ PRINCIPAL MODERNA CON SIDEBAR RETRÁCTIL ---
+  // --- INTERFAZ PRINCIPAL CON CARRUSEL POR AMBIENTE ---
   return (
     <div 
       onContextMenu={(e) => e.preventDefault()}
@@ -363,7 +390,7 @@ function App() {
         backgroundColor: modoOscuro ? 'rgba(10, 10, 10, 0.85)' : 'rgba(248, 250, 252, 0.88)', pointerEvents: 'none'
       }}></div>
 
-      {/* BOTÓN FLOTANTE MÓVIL PARA ABRIR/CERRAR MENÚ (HAMBURGUESA) */}
+      {/* BOTÓN FLOTANTE MÓVIL (HAMBURGUESA) */}
       <button 
         onClick={() => setMenuAbierto(!menuAbierto)}
         style={{
@@ -380,7 +407,7 @@ function App() {
         {menuAbierto ? '✕' : '☰'}
       </button>
 
-      {/* SIDEBAR LATERAL IZQUIERDO (CON CONTROL MÓVIL) */}
+      {/* SIDEBAR LATERAL IZQUIERDO */}
       <aside style={{
         position: 'fixed', top: 0, left: menuAbierto ? 0 : '-280px', width: '280px', height: '100vh', zIndex: 40,
         backgroundColor: modoOscuro ? 'rgba(20, 20, 20, 0.92)' : 'rgba(255, 255, 255, 0.95)',
@@ -395,7 +422,6 @@ function App() {
             <p style={{ fontSize: '0.65rem', color: modoOscuro ? '#9ca3af' : '#64748b', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '700' }}>Arquitectura y Diseño</p>
           </div>
 
-          {/* MENÚ DE NAVEGACIÓN PARA ADMIN */}
           {rolUsuario === 'admin' && (
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: '800', color: modoOscuro ? '#6b7280' : '#94a3b8', paddingLeft: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Panel de Control</span>
@@ -419,7 +445,6 @@ function App() {
           )}
         </div>
 
-        {/* PERFIL Y CONFIGURACIÓN EN EL FOOTER DEL SIDEBAR */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '20px' }}>
           <button 
             onClick={toggleTema}
@@ -438,7 +463,7 @@ function App() {
         </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL (CON MARGEN IZQUIERDO ADAPTADO) */}
+      {/* CONTENIDO PRINCIPAL */}
       <main style={{ position: 'relative', zIndex: 10, flex: 1, padding: '40px 30px 40px 80px', boxSizing: 'border-box', overflowY: 'auto', maxHeight: '100vh' }}>
         <div style={{ maxWidth: '950px', margin: '0 auto' }}>
 
@@ -549,18 +574,18 @@ function App() {
               <button type="submit" style={{ backgroundColor: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', padding: '14px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>Registrar en Supabase</button>
             </form>
           ) : (
-            /* VISTA: LISTA DE PROYECTOS Y FILTRO DE AMBIENTES PARA CLIENTES */
+            /* VISTA: LISTA DE AMBIENTES AGRUPADOS CON CARRUSEL */
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
                   <h2 style={{ color: modoOscuro ? '#fff' : '#0f172a', margin: '0 0 4px 0', fontSize: '1.6rem', fontWeight: '900' }}>
-                    {rolUsuario === 'admin' ? 'Todos los Proyectos y Renders' : 'Tus Renders y Diseños Asignados'}
+                    {rolUsuario === 'admin' ? 'Todos los Ambientes y Renders' : 'Tus Ambientes Asignados'}
                   </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b' }}>Explora y evalúa cada espacio de tu proyecto con total seguridad.</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b' }}>Navega entre los diseños de cada ambiente y aprueba en conjunto.</p>
                 </div>
 
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  {/* FILTRO DE AMBIENTE PARA CLIENTES O ADMIN */}
+                  {/* FILTRO DE AMBIENTE */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', padding: '8px 14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
                     <span style={{ fontSize: '0.75rem', fontWeight: '800', color: modoOscuro ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Ambiente:</span>
                     <select 
@@ -595,114 +620,167 @@ function App() {
               
               {cargandoProyectos ? (
                 <p style={{ textAlign: 'center', color: modoOscuro ? '#9ca3af' : '#64748b', padding: '40px 0' }}>Cargando proyectos...</p>
-              ) : proyectosFiltradosPorAmbiente.length === 0 ? (
-                <p style={{ textAlign: 'center', color: modoOscuro ? '#9ca3af' : '#64748b', padding: '40px 0' }}>No hay renders encontrados para este filtro.</p>
+              ) : Object.keys(ambientesAgrupados).length === 0 ? (
+                <p style={{ textAlign: 'center', color: modoOscuro ? '#9ca3af' : '#64748b', padding: '40px 0' }}>No hay ambientes encontrados para este filtro.</p>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '30px' }}>
-                  {proyectosFiltradosPorAmbiente.map(p => (
-                    <div key={p.id} style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', overflow: 'hidden', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.5)' : '0 20px 40px rgba(0,0,0,0.05)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-                      
-                      {/* IMAGEN CON MARCA DE AGUA CORPORATIVA Y CONTAIN */}
-                      <div style={{ position: 'relative', width: '100%', height: '380px', backgroundColor: '#09090b' }}>
-                        <img 
-                          src={p.imagen} 
-                          alt={p.titulo} 
-                          draggable="false" 
-                          style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} 
-                        />
-                        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 2 }}></div>
-                        <div style={{
-                          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-25deg)',
-                          color: 'rgba(255, 255, 255, 0.3)', fontSize: '1.5rem', fontWeight: '900', textAlign: 'center',
-                          pointerEvents: 'none', zIndex: '3', width: '100%', textShadow: '0 2px 8px rgba(0,0,0,0.8)', lineHeight: '1.5', letterSpacing: '2px'
-                        }}>
-                          MOSH<br/>
-                          MOSH ARQUITECTURA Y DISEÑO<br/>
-                          <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>Visualizado por: {usuarioLogueado}</span>
-                        </div>
-                      </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '35px' }}>
+                  {Object.entries(ambientesAgrupados).map(([nombreAmbiente, listaRenders]) => {
+                    const indiceActual = indicesCarrusel[nombreAmbiente] || 0;
+                    const renderActual = listaRenders[indiceActual] || listaRenders[0];
+                    const estadoAmbiente = renderActual.estado || 'En revisión';
 
-                      <div style={{ padding: '24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: '0.7rem', background: modoOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9', color: modoOscuro ? '#e2e8f0' : '#334155', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Ambiente: {p.ambiente || 'General'}
+                    return (
+                      <div key={nombreAmbiente} style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', overflow: 'hidden', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.5)' : '0 20px 40px rgba(0,0,0,0.05)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
+                        
+                        {/* CABECERA DE AMBIENTE */}
+                        <div style={{ padding: '20px 24px 0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', background: modoOscuro ? 'rgba(255,255,255,0.1)' : '#e2e8f0', color: modoOscuro ? '#fff' : '#0f172a', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                              🏠 {nombreAmbiente}
                             </span>
-                            <span style={{ fontSize: '0.7rem', background: modoOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9', color: modoOscuro ? '#e2e8f0' : '#334155', padding: '5px 10px', borderRadius: '6px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Cliente: {p.cliente}
+                            <span style={{ fontSize: '0.75rem', color: modoOscuro ? '#9ca3af' : '#64748b', fontWeight: '700' }}>
+                              Cliente: {renderActual.cliente}
                             </span>
                           </div>
+
+                          <span style={{ 
+                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '8px', fontWeight: '900',
+                            backgroundColor: estadoAmbiente === 'Aprobado' ? (modoOscuro ? 'rgba(6, 78, 59, 0.6)' : '#dcfce7') : (modoOscuro ? 'rgba(113, 63, 18, 0.6)' : '#fef9c3'),
+                            color: estadoAmbiente === 'Aprobado' ? (modoOscuro ? '#6ee7b7' : '#166534') : (modoOscuro ? '#fde047' : '#854d0e')
+                          }}>
+                            Estado: {estadoAmbiente}
+                          </span>
+                        </div>
+
+                        {/* CONTENEDOR DEL CARRUSEL DE IMÁGENES */}
+                        <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#09090b', marginTop: '16px' }}>
+                          <img 
+                            src={renderActual.imagen} 
+                            alt={renderActual.titulo} 
+                            draggable="false" 
+                            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} 
+                          />
                           
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <span style={{ 
-                              fontSize: '0.75rem', padding: '5px 12px', borderRadius: '6px', fontWeight: '800',
-                              backgroundColor: p.estado === 'Aprobado' ? (modoOscuro ? 'rgba(6, 78, 59, 0.6)' : '#dcfce7') : (modoOscuro ? 'rgba(113, 63, 18, 0.6)' : '#fef9c3'),
-                              color: p.estado === 'Aprobado' ? (modoOscuro ? '#6ee7b7' : '#166534') : (modoOscuro ? '#fde047' : '#854d0e')
-                            }}>
-                              {p.estado || 'En revisión'}
-                            </span>
+                          <div style={{
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-25deg)',
+                            color: 'rgba(255, 255, 255, 0.3)', fontSize: '1.5rem', fontWeight: '900', textAlign: 'center',
+                            pointerEvents: 'none', zIndex: '3', width: '100%', textShadow: '0 2px 8px rgba(0,0,0,0.8)', lineHeight: '1.5', letterSpacing: '2px'
+                          }}>
+                            MOSH<br/>
+                            MOSH ARQUITECTURA Y DISEÑO<br/>
+                            <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>Visualizado por: {usuarioLogueado}</span>
+                          </div>
+
+                          {/* FLECHAS DE NAVEGACIÓN DEL CARRUSEL (SI HAY MÁS DE 1 IMAGEN) */}
+                          {listaRenders.length > 1 && (
+                            <>
+                              <button 
+                                onClick={() => cambiarIndiceCarrusel(nombreAmbiente, -1, listaRenders.length)}
+                                style={{
+                                  position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)', zIndex: 10,
+                                  background: 'rgba(0, 0, 0, 0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                                  borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.2rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                                }}
+                                title="Imagen anterior"
+                              >
+                                ❮
+                              </button>
+
+                              <button 
+                                onClick={() => cambiarIndiceCarrusel(nombreAmbiente, 1, listaRenders.length)}
+                                style={{
+                                  position: 'absolute', top: '50%', right: '16px', transform: 'translateY(-50%)', zIndex: 10,
+                                  background: 'rgba(0, 0, 0, 0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
+                                  borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.2rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                                }}
+                                title="Imagen siguiente"
+                              >
+                                ❯
+                              </button>
+
+                              {/* INDICADOR DE POSICIÓN Y TÍTULO DE LA IMAGEN ACTUAL */}
+                              <div style={{
+                                position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10,
+                                background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', padding: '6px 16px', borderRadius: '20px',
+                                color: 'white', fontSize: '0.8rem', fontWeight: '700', border: '1px solid rgba(255,255,255,0.15)',
+                                display: 'flex', gap: '8px', alignItems: 'center'
+                              }}>
+                                <span>{renderActual.titulo}</span>
+                                <span style={{ opacity: 0.6 }}>|</span>
+                                <span style={{ color: '#38bdf8' }}>{indiceActual + 1} / {listaRenders.length}</span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        {/* DETALLES Y ACCIONES DEL AMBIENTE */}
+                        <div style={{ padding: '24px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '10px' }}>
+                            <div>
+                              <h3 style={{ margin: '0 0 6px 0', color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.25rem', fontWeight: '800' }}>{renderActual.titulo}</h3>
+                              <p style={{ margin: 0, fontSize: '0.9rem', color: modoOscuro ? '#9ca3af' : '#64748b', lineHeight: '1.5' }}>{renderActual.descripcion || 'Sin descripción adicional para este diseño.'}</p>
+                            </div>
 
                             {rolUsuario === 'admin' && (
                               <button 
-                                onClick={() => eliminarProyecto(p.id, p.titulo)}
-                                title="Eliminar render"
-                                style={{ backgroundColor: modoOscuro ? 'rgba(69, 10, 10, 0.6)' : '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', fontSize: '0.85rem' }}
+                                onClick={() => eliminarProyecto(renderActual.id, renderActual.titulo)}
+                                title="Eliminar este render específico"
+                                style={{ backgroundColor: modoOscuro ? 'rgba(69, 10, 10, 0.6)' : '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700', whiteSpace: 'nowrap' }}
                               >
-                                🗑️
+                                🗑️ Borrar Render Actual
                               </button>
                             )}
                           </div>
-                        </div>
 
-                        <h3 style={{ margin: '8px 0 6px 0', color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.25rem', fontWeight: '800' }}>{p.titulo}</h3>
-                        <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: modoOscuro ? '#9ca3af' : '#64748b', lineHeight: '1.6' }}>{p.descripcion}</p>
-
-                        {/* BOTONES ORIGINALES PARA CAMBIAR ESTADO */}
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: modoOscuro ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)' }}>
-                          <span style={{ fontSize: '0.8rem', fontWeight: '800', alignSelf: 'center', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cambiar Estado:</span>
-                          <button 
-                            onClick={() => cambiarEstado(p.id, 'Aprobado')}
-                            style={{ padding: '8px 14px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
-                          >
-                            ✓ Aprobar
-                          </button>
-                          <button 
-                            onClick={() => cambiarEstado(p.id, 'En revisión')}
-                            style={{ padding: '8px 14px', background: '#ca8a04', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(202,138,4,0.3)' }}
-                          >
-                            ⏳ Marcar en Revisión
-                          </button>
-                        </div>
-
-                        {/* SECCIÓN DE COMENTARIOS */}
-                        <div style={{ borderTop: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '18px' }}>
-                          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800' }}>💬 Comentarios y Retroalimentación</h4>
-                          
-                          <div style={{ background: modoOscuro ? 'rgba(0,0,0,0.25)' : '#f8fafc', padding: '12px 16px', borderRadius: '10px', minHeight: '40px', maxHeight: '120px', overflowY: 'auto', marginBottom: '12px', fontSize: '0.85rem', whiteSpace: 'pre-line', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)', color: modoOscuro ? '#e2e8f0' : '#1e293b' }}>
-                            {p.comentarios ? p.comentarios : <span style={{ color: modoOscuro ? '#6b7280' : '#94a3b8' }}>No hay comentarios aún. Deja tus observaciones abajo.</span>}
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '10px' }}>
-                            <input 
-                              type="text" 
-                              placeholder="Escribe un comentario sobre este render..." 
-                              value={textosComentarios[p.id] || ''}
-                              onChange={(e) => setTextosComentarios({ ...textosComentarios, [p.id]: e.target.value })}
-                              style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', fontSize: '0.85rem', outline: 'none' }}
-                            />
+                          {/* ÚNICO BOTÓN DE ESTADO / APROBACIÓN PARA TODO EL AMBIENTE */}
+                          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: modoOscuro ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '800', alignSelf: 'center', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estado del Ambiente:</span>
                             <button 
-                              onClick={() => enviarComentario(p)}
-                              style={{ padding: '12px 20px', background: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                              onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'Aprobado')}
+                              style={{ padding: '8px 16px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
                             >
-                              Enviar
+                              ✓ Aprobar Ambiente
+                            </button>
+                            <button 
+                              onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'En revisión')}
+                              style={{ padding: '8px 16px', background: '#ca8a04', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(202,138,4,0.3)' }}
+                            >
+                              ⏳ Marcar en Revisión
                             </button>
                           </div>
+
+                          {/* SECCIÓN DE COMENTARIOS GENERALES DEL AMBIENTE */}
+                          <div style={{ borderTop: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '18px' }}>
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800' }}>💬 Comentarios del Ambiente ({nombreAmbiente})</h4>
+                            
+                            <div style={{ background: modoOscuro ? 'rgba(0,0,0,0.25)' : '#f8fafc', padding: '12px 16px', borderRadius: '10px', minHeight: '40px', maxHeight: '120px', overflowY: 'auto', marginBottom: '12px', fontSize: '0.85rem', whiteSpace: 'pre-line', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)', color: modoOscuro ? '#e2e8f0' : '#1e293b' }}>
+                              {renderActual.comentarios ? renderActual.comentarios : <span style={{ color: modoOscuro ? '#6b7280' : '#94a3b8' }}>No hay comentarios aún para este ambiente. Deja tus observaciones abajo.</span>}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                              <input 
+                                type="text" 
+                                placeholder={`Escribe un comentario para el ambiente ${nombreAmbiente}...`} 
+                                value={textosComentarios[nombreAmbiente] || ''}
+                                onChange={(e) => setTextosComentarios({ ...textosComentarios, [nombreAmbiente]: e.target.value })}
+                                style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', fontSize: '0.85rem', outline: 'none' }}
+                              />
+                              <button 
+                                onClick={() => enviarComentarioAmbiente(nombreAmbiente, listaRenders)}
+                                style={{ padding: '12px 20px', background: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                              >
+                                Enviar
+                              </button>
+                            </div>
+                          </div>
+
                         </div>
 
                       </div>
-
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
