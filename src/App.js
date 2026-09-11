@@ -73,6 +73,7 @@ function App() {
   };
 
   const [vista, setVista] = useState('proyectos');
+  const [menuAbierto, setMenuAbierto] = useState(false); // Estado para abrir/cerrar sidebar en celular
   const [proyectos, setProyectos] = useState([]);
   const [listaClientes, setListaClientes] = useState([]);
   const [todosLosUsuarios, setTodosLosUsuarios] = useState([]);
@@ -338,7 +339,7 @@ function App() {
     );
   }
 
-  // --- INTERFAZ PRINCIPAL MODERNA CON SIDEBAR Y FONDO BLUR ---
+  // --- INTERFAZ PRINCIPAL MODERNA CON SIDEBAR RETRÁCTIL ---
   return (
     <div 
       onContextMenu={(e) => e.preventDefault()}
@@ -357,21 +358,39 @@ function App() {
         backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(30px)', opacity: modoOscuro ? 0.15 : 0.08, pointerEvents: 'none'
       }}></div>
 
-      {/* CAPA OSCURA / CLARA SOBRE EL FONDO */}
       <div style={{
         position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0,
         backgroundColor: modoOscuro ? 'rgba(10, 10, 10, 0.85)' : 'rgba(248, 250, 252, 0.88)', pointerEvents: 'none'
       }}></div>
 
-      {/* SIDEBAR LATERAL IZQUIERDO */}
+      {/* BOTÓN FLOTANTE MÓVIL PARA ABRIR/CERRAR MENÚ (HAMBURGUESA) */}
+      <button 
+        onClick={() => setMenuAbierto(!menuAbierto)}
+        style={{
+          position: 'fixed', top: '16px', left: '16px', zIndex: 50,
+          background: modoOscuro ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)', color: modoOscuro ? '#fff' : '#0f172a',
+          border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+          borderRadius: '10px', width: '44px', height: '44px', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+        }}
+        title="Menú de navegación"
+      >
+        {menuAbierto ? '✕' : '☰'}
+      </button>
+
+      {/* SIDEBAR LATERAL IZQUIERDO (CON CONTROL MÓVIL) */}
       <aside style={{
-        position: 'relative', zIndex: 10, width: '280px', minHeight: '100vh',
-        backgroundColor: modoOscuro ? 'rgba(20, 20, 20, 0.75)' : 'rgba(255, 255, 255, 0.8)',
+        position: 'fixed', top: 0, left: menuAbierto ? 0 : '-280px', width: '280px', height: '100vh', zIndex: 40,
+        backgroundColor: modoOscuro ? 'rgba(20, 20, 20, 0.92)' : 'rgba(255, 255, 255, 0.95)',
         backdropFilter: 'blur(20px)', borderRight: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 20px', boxSizing: 'border-box'
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 20px', boxSizing: 'border-box',
+        transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: menuAbierto ? '10px 0 30px rgba(0,0,0,0.5)' : 'none'
       }}>
         <div>
-          <div style={{ marginBottom: '35px', paddingLeft: '10px' }}>
+          <div style={{ marginBottom: '35px', paddingLeft: '45px' }}>
             <h2 style={{ fontSize: '1.25rem', margin: 0, letterSpacing: '3px', fontWeight: '900', color: modoOscuro ? '#fff' : '#0f172a' }}>MOSH</h2>
             <p style={{ fontSize: '0.65rem', color: modoOscuro ? '#9ca3af' : '#64748b', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '700' }}>Arquitectura y Diseño</p>
           </div>
@@ -381,19 +400,19 @@ function App() {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <span style={{ fontSize: '0.65rem', fontWeight: '800', color: modoOscuro ? '#6b7280' : '#94a3b8', paddingLeft: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Panel de Control</span>
               
-              <button onClick={() => setVista('proyectos')} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'proyectos' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'proyectos' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
+              <button onClick={() => { setVista('proyectos'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'proyectos' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'proyectos' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
                 📁 Ver Proyectos
               </button>
               
-              <button onClick={() => setVista('subir')} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'subir' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'subir' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
+              <button onClick={() => { setVista('subir'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'subir' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'subir' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
                 ➕ Subir Nuevo Render
               </button>
               
-              <button onClick={() => setVista('crear_usuario')} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'crear_usuario' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'crear_usuario' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
+              <button onClick={() => { setVista('crear_usuario'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'crear_usuario' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'crear_usuario' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
                 👤 Crear Cuenta
               </button>
               
-              <button onClick={() => setVista('gestionar_usuarios')} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'gestionar_usuarios' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'gestionar_usuarios' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
+              <button onClick={() => { setVista('gestionar_usuarios'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'gestionar_usuarios' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'gestionar_usuarios' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
                 👥 Gestionar Usuarios
               </button>
             </nav>
@@ -419,8 +438,8 @@ function App() {
         </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main style={{ position: 'relative', zIndex: 10, flex: 1, padding: '40px 50px', boxSizing: 'border-box', overflowY: 'auto', maxHeight: '100vh' }}>
+      {/* CONTENIDO PRINCIPAL (CON MARGEN IZQUIERDO ADAPTADO) */}
+      <main style={{ position: 'relative', zIndex: 10, flex: 1, padding: '40px 30px 40px 80px', boxSizing: 'border-box', overflowY: 'auto', maxHeight: '100vh' }}>
         <div style={{ maxWidth: '950px', margin: '0 auto' }}>
 
           {/* VISTA: GESTIONAR USUARIOS */}
