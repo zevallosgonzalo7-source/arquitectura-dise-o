@@ -6,6 +6,256 @@ const supabaseUrl = 'https://omjxjtznuligbcyqoxip.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tanhqdHpudWxpZ2JjeXFveGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwOTMzMzgsImV4cCI6MjEwNDY2OTMzOH0.aJZWDAhKDPnfn-wVppZwrZE4CpuhLRfG4Y6YIvyDHf4';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// --- SISTEMA DE DISEÑO: paleta "plano de arquitectura" ---
+const PALETTE = {
+  ink: '#14161A',
+  inkRaised: '#1B1E23',
+  paper: '#F7F5F1',
+  paperRaised: '#FFFFFF',
+  blueprint: '#2F5D8A',
+  blueprintLight: '#5B85B3',
+  moss: '#4C7A5D',
+  mossSoft: '#DCE8DF',
+  ochre: '#B08A3E',
+  ochreSoft: '#F1E6CE',
+  danger: '#B3564A',
+  dangerSoft: '#F3DEDA',
+};
+
+const FONT_SERIF = "'Fraunces', Georgia, 'Times New Roman', serif";
+const FONT_SANS = "'Inter', system-ui, -apple-system, sans-serif";
+
+// ============================================================================
+// ESTILOS GLOBALES
+// Incluye: reset anti-líneas-blancas, scrollbars ocultas, shimmer de skeletons,
+// animaciones de toast, micro-interacciones táctiles y accesibilidad de foco.
+// ============================================================================
+const GlobalStyles = ({ bgColor }) => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    /* --- Reset anti líneas blancas / overflows --- */
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: ${bgColor};
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { transition: background-color 0.3s ease; }
+
+    .mosh-scope, .mosh-scope input, .mosh-scope select, .mosh-scope textarea, .mosh-scope button {
+      font-family: ${FONT_SANS};
+    }
+    .mosh-scope *:focus-visible {
+      outline: 2px solid ${PALETTE.blueprint};
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* --- Scrollbars invisibles, scroll funcional intacto --- */
+    .mosh-scroll {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .mosh-scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+    /* --- Sensación de app nativa --- */
+    .mosh-scope button {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .mosh-btn { transition: filter 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease; }
+    .mosh-btn:hover { filter: brightness(1.08); }
+    .mosh-btn:active { transform: scale(0.96); }
+    .mosh-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+    .mosh-card:hover { transform: translateY(-3px); }
+    .mosh-icon-btn { transition: filter 0.15s ease, border-color 0.15s ease, transform 0.08s ease; }
+    .mosh-icon-btn:hover { filter: brightness(1.15); border-color: ${PALETTE.blueprint} !important; }
+    .mosh-icon-btn:active { transform: scale(0.92); }
+    .mosh-input { transition: border-color 0.15s ease, background 0.15s ease; }
+    .mosh-input:focus { border-color: ${PALETTE.blueprint} !important; }
+    .mosh-nav-dark:hover { background: rgba(247,245,241,0.06) !important; color: #fff !important; }
+    .mosh-nav-light:hover { background: rgba(20,22,26,0.05) !important; color: #14161A !important; }
+    .mosh-tab { transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease; min-height: 44px; }
+    .mosh-arrow { transition: background 0.15s ease, transform 0.08s ease; }
+    .mosh-arrow:hover { background: rgba(0,0,0,0.8) !important; }
+    .mosh-arrow:active { transform: translateY(-50%) scale(0.9) !important; }
+
+    /* --- Protección visual de imágenes --- */
+    .mosh-img-protect {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /* --- Skeleton loaders con brillo animado --- */
+    .mosh-skeleton {
+      background: linear-gradient(90deg, var(--skel-a) 25%, var(--skel-b) 37%, var(--skel-a) 63%);
+      background-size: 400% 100%;
+      animation: mosh-shimmer 1.4s ease infinite;
+      border-radius: 8px;
+    }
+    @keyframes mosh-shimmer {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
+
+    /* --- Toasts --- */
+    .mosh-toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      width: min(360px, calc(100vw - 32px));
+      pointer-events: none;
+    }
+    @media (max-width: 768px) {
+      .mosh-toast-container { left: 16px; right: 16px; top: 16px; width: auto; }
+    }
+    .mosh-toast {
+      pointer-events: auto;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 16px 34px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255,255,255,0.08);
+      animation: mosh-toast-in 0.35s cubic-bezier(0.2,0.9,0.3,1.25);
+    }
+    .mosh-toast.saliendo { animation: mosh-toast-out 0.28s ease forwards; }
+    @keyframes mosh-toast-in {
+      from { opacity: 0; transform: translateX(24px) scale(0.96); }
+      to { opacity: 1; transform: translateX(0) scale(1); }
+    }
+    @keyframes mosh-toast-out {
+      from { opacity: 1; transform: translateX(0) scale(1); }
+      to { opacity: 0; transform: translateX(24px) scale(0.94); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .mosh-scope * { animation: none !important; transition: none !important; }
+    }
+  `}</style>
+);
+
+// ============================================================================
+// COMPONENTE: NOTIFICACIONES FLOTANTES (TOAST)
+// ============================================================================
+const TOAST_CONFIG = {
+  success: { border: PALETTE.moss, bg: 'rgba(76,122,93,0.20)', color: '#9FD4B4', icon: '✓' },
+  error: { border: PALETTE.danger, bg: 'rgba(179,86,74,0.20)', color: '#EFA99C', icon: '✕' },
+  warning: { border: PALETTE.ochre, bg: 'rgba(176,138,62,0.20)', color: '#F0CD90', icon: '⚠' },
+  info: { border: PALETTE.blueprint, bg: 'rgba(47,93,138,0.20)', color: '#9FC1E8', icon: 'ℹ' },
+};
+
+function Toast({ mensaje, tipo, saliendo, onClose }) {
+  const cfg = TOAST_CONFIG[tipo] || TOAST_CONFIG.info;
+  return (
+    <div
+      className={`mosh-toast${saliendo ? ' saliendo' : ''}`}
+      style={{ background: `linear-gradient(135deg, rgba(27,30,35,0.92), rgba(27,30,35,0.86))`, borderLeft: `3px solid ${cfg.border}` }}
+    >
+      <span style={{ fontSize: '1.05rem', fontWeight: '800', color: cfg.color, lineHeight: '1.3' }}>{cfg.icon}</span>
+      <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: '600', color: '#F3F1EC', lineHeight: '1.4' }}>{mensaje}</span>
+      <button
+        onClick={onClose}
+        className="mosh-icon-btn"
+        style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.9rem', padding: '2px', lineHeight: 1 }}
+        aria-label="Cerrar notificación"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
+function ToastContainer({ toasts, onClose }) {
+  if (toasts.length === 0) return null;
+  return (
+    <div className="mosh-toast-container">
+      {toasts.map(tst => (
+        <Toast key={tst.id} {...tst} onClose={() => onClose(tst.id)} />
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPONENTE: IMAGEN PROTEGIDA (anti-robo + lazy load + fade-in)
+// ============================================================================
+function ImagenProtegida({ src, alt, onClick, objectFit = 'contain', background = '#0C0D0F' }) {
+  const [cargada, setCargada] = useState(false);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background }}>
+      {!cargada && <div className="mosh-skeleton" style={{ position: 'absolute', inset: 0, borderRadius: 0 }} />}
+      <img
+        src={src}
+        alt={alt}
+        loading="lazy"
+        draggable={false}
+        className="mosh-img-protect"
+        onLoad={() => setCargada(true)}
+        onError={() => setCargada(true)}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit,
+          display: 'block',
+          opacity: cargada ? 1 : 0,
+          transition: 'opacity 0.6s ease',
+        }}
+      />
+      {/* Capa invisible: absorbe clic (opcionalmente reenviado) y bloquea menú contextual / arrastre / long-press */}
+      <div
+        onContextMenu={(e) => e.preventDefault()}
+        onDragStart={(e) => e.preventDefault()}
+        onClick={onClick}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          cursor: onClick ? 'zoom-in' : 'default',
+          WebkitTouchCallout: 'none',
+          background: 'transparent',
+        }}
+      />
+    </div>
+  );
+}
+
+// ============================================================================
+// COMPONENTE: SKELETON LOADER (tarjeta fantasma de ambiente)
+// ============================================================================
+function SkeletonAmbienteCard({ t, esMovil }) {
+  return (
+    <div style={{ background: t.surface, borderRadius: '16px', overflow: 'hidden', border: `1px solid ${t.border}`, boxShadow: t.shadow }}>
+      <div style={{ padding: '18px 18px 0 18px', display: 'flex', justifyContent: 'space-between' }}>
+        <div className="mosh-skeleton" style={{ height: '16px', width: '38%' }} />
+        <div className="mosh-skeleton" style={{ height: '16px', width: '18%', borderRadius: '20px' }} />
+      </div>
+      <div className="mosh-skeleton" style={{ height: esMovil ? '220px' : '360px', margin: '16px 18px 0 18px' }} />
+      <div style={{ padding: '20px' }}>
+        <div className="mosh-skeleton" style={{ height: '14px', width: '55%', marginBottom: '10px' }} />
+        <div className="mosh-skeleton" style={{ height: '12px', width: '85%', marginBottom: '18px' }} />
+        <div className="mosh-skeleton" style={{ height: '38px', width: '100%' }} />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [usuarioLogueado, setUsuarioLogueado] = useState(() => {
     const savedUser = localStorage.getItem('arq_sesion_usuario');
@@ -20,10 +270,19 @@ function App() {
     return localStorage.getItem('arq_sesion_rol') || 'cliente';
   });
 
+  // --- DETECTOR DE PANTALLA MÓVIL ---
+  const [esMovil, setEsMovil] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const manejarResize = () => setEsMovil(window.innerWidth <= 768);
+    window.addEventListener('resize', manejarResize);
+    return () => window.removeEventListener('resize', manejarResize);
+  }, []);
+
   // --- ESTADO DE TEMA (MODO OSCURO / CLARO) ---
   const [modoOscuro, setModoOscuro] = useState(() => {
     const savedTheme = localStorage.getItem('arq_modo_oscuro');
-    return savedTheme !== null ? JSON.parse(savedTheme) : true; 
+    return savedTheme !== null ? JSON.parse(savedTheme) : true;
   });
 
   useEffect(() => {
@@ -31,7 +290,38 @@ function App() {
   }, [modoOscuro]);
 
   const toggleTema = () => setModoOscuro(!modoOscuro);
-  
+
+  // --- TOKENS DE TEMA DERIVADOS ---
+  const t = {
+    bg: modoOscuro ? PALETTE.ink : PALETTE.paper,
+    surface: modoOscuro ? 'rgba(247,245,241,0.035)' : 'rgba(255,255,255,0.72)',
+    surfaceRaised: modoOscuro ? 'rgba(247,245,241,0.055)' : '#FFFFFF',
+    field: modoOscuro ? 'rgba(247,245,241,0.05)' : '#FFFFFF',
+    border: modoOscuro ? 'rgba(247,245,241,0.10)' : 'rgba(20,22,26,0.09)',
+    borderSoft: modoOscuro ? 'rgba(247,245,241,0.06)' : 'rgba(20,22,26,0.05)',
+    text: modoOscuro ? '#F3F1EC' : '#181A1D',
+    textMuted: modoOscuro ? '#A6A29A' : '#6E6A63',
+    textFaint: modoOscuro ? '#726E68' : '#9A968F',
+    navClass: modoOscuro ? 'mosh-nav-dark' : 'mosh-nav-light',
+    shadow: modoOscuro ? '0 24px 48px rgba(0,0,0,0.45)' : '0 24px 48px rgba(20,22,26,0.07)',
+    skelA: modoOscuro ? 'rgba(255,255,255,0.05)' : 'rgba(20,22,26,0.05)',
+    skelB: modoOscuro ? 'rgba(255,255,255,0.13)' : 'rgba(20,22,26,0.11)',
+  };
+
+  // --- SISTEMA DE NOTIFICACIONES FLOTANTES ---
+  const [toasts, setToasts] = useState([]);
+
+  const cerrarToast = useCallback((id) => {
+    setToasts(prev => prev.map(tst => (tst.id === id ? { ...tst, saliendo: true } : tst)));
+    setTimeout(() => setToasts(prev => prev.filter(tst => tst.id !== id)), 280);
+  }, []);
+
+  const mostrarNotificacion = useCallback((mensaje, tipo = 'info', duracion = 3500) => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts(prev => [...prev, { id, mensaje, tipo, saliendo: false }]);
+    setTimeout(() => cerrarToast(id), duracion);
+  }, [cerrarToast]);
+
   const [inputUser, setInputUser] = useState('');
   const [inputPass, setInputPass] = useState('');
   const [errorLogin, setErrorLogin] = useState('');
@@ -58,6 +348,7 @@ function App() {
         localStorage.setItem('arq_sesion_rol', data.rol);
         setUsuarioLogueado(data.username);
         setRolUsuario(data.rol);
+        mostrarNotificacion(`Bienvenido, ${data.username}`, 'success');
       }
     } catch (err) {
       setErrorLogin('Error al conectar con la base de datos.');
@@ -79,10 +370,14 @@ function App() {
   const [todosLosUsuarios, setTodosLosUsuarios] = useState([]);
   const [cargandoProyectos, setCargandoProyectos] = useState(true);
 
+  // Estado para el Lightbox (Pantalla completa de imagen)
+  const [imagenZoom, setImagenZoom] = useState(null);
+
   const [filtroClienteAdmin, setFiltroClienteAdmin] = useState('');
   const [filtroAmbienteCliente, setFiltroAmbienteCliente] = useState('');
+  const [filtroEstadoTab, setFiltroEstadoTab] = useState('todos');
 
-  // Control de índices del carrusel por cada ambiente (clave: nombre de ambiente, valor: índice numérico)
+  // Control de índices del carrusel por cada ambiente
   const [indicesCarrusel, setIndicesCarrusel] = useState({});
 
   const cambiarIndiceCarrusel = (ambiente, direccion, total) => {
@@ -142,18 +437,23 @@ function App() {
     }
   }, [usuarioLogueado, fetchProyectos, fetchClientes, fetchTodosLosUsuarios]);
 
-  // --- ESTADOS PARA SUBIR PROYECTOS Y AMBIENTES ---
+  // --- ESTADOS PARA SUBIR PROYECTOS, AMBIENTES Y VERSIÓN ---
   const [nuevoTitulo, setNuevoTitulo] = useState('');
   const [nuevoClienteSeleccionado, setNuevoClienteSeleccionado] = useState('');
   const [nuevoAmbiente, setNuevoAmbiente] = useState('');
+  const [nuevaVersion, setNuevaVersion] = useState('Versión 1');
   const [nuevaImagen, setNuevaImagen] = useState('');
   const [nuevaDesc, setNuevaDesc] = useState('');
+  const [guardandoProyecto, setGuardandoProyecto] = useState(false);
 
   const agregarProyecto = async (e) => {
     e.preventDefault();
+    setGuardandoProyecto(true);
+    const tituloConVersion = `${nuevoTitulo.trim()} (${nuevaVersion})`;
+
     const { error } = await supabase.from('proyectos').insert([
       {
-        titulo: nuevoTitulo,
+        titulo: tituloConVersion,
         cliente: nuevoClienteSeleccionado,
         ambiente: nuevoAmbiente.trim() || 'General',
         imagen: nuevaImagen || 'https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?auto=format&fit=crop&w=800&q=80',
@@ -163,13 +463,16 @@ function App() {
       }
     ]);
 
+    setGuardandoProyecto(false);
+
     if (error) {
-      alert('Error al guardar el proyecto en Supabase: ' + error.message);
+      mostrarNotificacion('Error al guardar el proyecto: ' + error.message, 'error');
     } else {
-      alert('¡Proyecto y ambiente asignado con éxito!');
+      mostrarNotificacion('Proyecto y versión asignada con éxito', 'success');
       setNuevoTitulo('');
       setNuevoClienteSeleccionado('');
       setNuevoAmbiente('');
+      setNuevaVersion('Versión 1');
       setNuevaImagen('');
       setNuevaDesc('');
       setVista('proyectos');
@@ -188,8 +491,10 @@ function App() {
         .eq('id', id);
 
       if (error) {
-        alert('Error al eliminar el render: ' + error.message);
+        mostrarNotificacion('Error al eliminar el render: ' + error.message, 'error');
         fetchProyectos(true);
+      } else {
+        mostrarNotificacion('Render eliminado correctamente', 'success');
       }
     }
   };
@@ -198,9 +503,11 @@ function App() {
   const [nuevoUsuarioNombre, setNuevoUsuarioNombre] = useState('');
   const [nuevoUsuarioPass, setNuevoUsuarioPass] = useState('');
   const [nuevoUsuarioRol, setNuevoUsuarioRol] = useState('cliente');
+  const [creandoUsuario, setCreandoUsuario] = useState(false);
 
   const crearUsuarioNuevo = async (e) => {
     e.preventDefault();
+    setCreandoUsuario(true);
     const { error } = await supabase.from('usuarios').insert([
       {
         username: nuevoUsuarioNombre.trim(),
@@ -208,11 +515,12 @@ function App() {
         rol: nuevoUsuarioRol
       }
     ]);
+    setCreandoUsuario(false);
 
     if (error) {
-      alert('Error al crear usuario. Es posible que ya exista.');
+      mostrarNotificacion('Error al crear usuario. Es posible que ya exista.', 'error');
     } else {
-      alert(`¡Usuario "${nuevoUsuarioNombre}" creado con éxito!`);
+      mostrarNotificacion(`Usuario "${nuevoUsuarioNombre}" creado con éxito`, 'success');
       setNuevoUsuarioNombre('');
       setNuevoUsuarioPass('');
       setNuevoUsuarioRol('cliente');
@@ -232,16 +540,17 @@ function App() {
       .eq('id', id);
 
     if (error) {
-      alert('Error al actualizar el rol del usuario.');
+      mostrarNotificacion('Error al actualizar el rol del usuario', 'error');
       fetchTodosLosUsuarios();
     } else {
+      mostrarNotificacion('Rol actualizado correctamente', 'success');
       fetchClientes();
     }
   };
 
   // --- CAMBIAR ESTADO A TODOS LOS RENDERS DE UN AMBIENTE ---
   const cambiarEstadoAmbiente = async (nombreAmbiente, nuevoEstado) => {
-    setProyectos(prevProyectos => 
+    setProyectos(prevProyectos =>
       prevProyectos.map(p => (p.ambiente || 'General') === nombreAmbiente ? { ...p, estado: nuevoEstado } : p)
     );
 
@@ -251,8 +560,10 @@ function App() {
       .eq('ambiente', nombreAmbiente);
 
     if (error) {
-      alert('Error al actualizar el estado del ambiente: ' + error.message);
+      mostrarNotificacion('Error al actualizar el estado del ambiente: ' + error.message, 'error');
       fetchProyectos(true);
+    } else {
+      mostrarNotificacion(`Ambiente marcado como "${nuevoEstado}"`, nuevoEstado === 'Aprobado' ? 'success' : 'info');
     }
   };
 
@@ -263,7 +574,6 @@ function App() {
     const textoNuevo = textosComentarios[nombreAmbiente];
     if (!textoNuevo || !textoNuevo.trim()) return;
 
-    // Tomamos como referencia el primer render del ambiente para acumular el historial global del ambiente
     const renderRef = rendersAmbiente[0];
     if (!renderRef) return;
 
@@ -272,33 +582,38 @@ function App() {
     const comentarioCompleto = `${usuarioLogueado} (${fechaActual}) : ${textoNuevo.trim()}`;
     const nuevoHistorial = historialActual + comentarioCompleto;
 
-    // Actualizamos localmente todos los renders de este ambiente
-    setProyectos(prevProyectos => 
+    setProyectos(prevProyectos =>
       prevProyectos.map(p => (p.ambiente || 'General') === nombreAmbiente ? { ...p, comentarios: nuevoHistorial } : p)
     );
     setTextosComentarios({ ...textosComentarios, [nombreAmbiente]: '' });
 
-    // Actualizamos en Supabase para todos los renders de este ambiente
     const { error } = await supabase
       .from('proyectos')
       .update({ comentarios: nuevoHistorial })
       .eq('ambiente', nombreAmbiente);
 
     if (error) {
-      alert('Error al enviar el comentario: ' + error.message);
+      mostrarNotificacion('Error al enviar el comentario: ' + error.message, 'error');
       fetchProyectos(true);
+    } else {
+      mostrarNotificacion('Comentario enviado', 'success');
     }
   };
 
-  // --- FILTRAR PROYECTOS ---
+  // --- FILTRAR PROYECTOS (AMBIENTE + PESTAÑA DE ESTADO) ---
   const proyectosFiltrados = proyectos.filter(p => {
-    if (!filtroAmbienteCliente) return true;
-    return p.ambiente?.toLowerCase() === filtroAmbienteCliente.toLowerCase();
+    const cumpleAmbiente = !filtroAmbienteCliente || p.ambiente?.toLowerCase() === filtroAmbienteCliente.toLowerCase();
+    const estadoActual = p.estado || 'En revisión';
+
+    let cumpleEstado = true;
+    if (filtroEstadoTab === 'aprobados') cumpleEstado = estadoActual === 'Aprobado';
+    if (filtroEstadoTab === 'revision') cumpleEstado = estadoActual === 'En revisión';
+
+    return cumpleAmbiente && cumpleEstado;
   });
 
   const ambientesDisponibles = [...new Set(proyectos.map(p => p.ambiente || 'General'))];
 
-  // AGRUPAR PROYECTOS POR AMBIENTE
   const ambientesAgrupados = proyectosFiltrados.reduce((acc, p) => {
     const amb = p.ambiente || 'General';
     if (!acc[amb]) acc[amb] = [];
@@ -306,101 +621,162 @@ function App() {
     return acc;
   }, {});
 
+  // Variables CSS de shimmer, inyectadas en el contenedor raíz para que las hereden los skeletons
+  const skelVars = { '--skel-a': t.skelA, '--skel-b': t.skelB };
+
+  // Estilo reutilizable para etiquetas de campo en formularios
+  const labelStyle = {
+    fontSize: '0.68rem', display: 'block', marginBottom: '8px', fontWeight: '700',
+    color: t.textMuted, letterSpacing: '0.02em'
+  };
+
+  const inputStyle = {
+    width: '100%', padding: '13px 15px', borderRadius: '10px', boxSizing: 'border-box',
+    border: `1px solid ${t.border}`, background: t.field, color: t.text,
+    outline: 'none', fontSize: '0.92rem'
+  };
+
+  const panelStyle = {
+    background: t.surface, backdropFilter: 'blur(20px)',
+    padding: esMovil ? '22px 18px' : '36px', borderRadius: '18px',
+    boxShadow: t.shadow, border: `1px solid ${t.border}`
+  };
+
   // --- PANTALLA DE LOGIN ---
   if (!usuarioLogueado) {
     return (
-      <div style={{ 
-        position: 'relative', display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center', 
+      <div className="mosh-scope" style={{
+        position: 'relative', display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center',
         backgroundImage: `url(${process.env.PUBLIC_URL}/LogotipoMosh-06.jpg.jpeg)`,
         backgroundSize: 'cover', backgroundPosition: 'center',
-        fontFamily: "'Inter', system-ui, sans-serif", padding: '20px', overflow: 'hidden' 
+        fontFamily: FONT_SANS, padding: '20px', overflow: 'hidden', ...skelVars
       }}>
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: modoOscuro ? 'rgba(15, 15, 15, 0.78)' : 'rgba(240, 240, 240, 0.78)', backdropFilter: 'blur(12px)' }}></div>
+        <GlobalStyles bgColor={t.bg} />
+        <ToastContainer toasts={toasts} onClose={cerrarToast} />
 
-        <button 
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: modoOscuro ? 'rgba(20, 22, 26, 0.82)' : 'rgba(247, 245, 241, 0.86)', backdropFilter: 'blur(14px)' }}></div>
+
+        <button
           onClick={toggleTema}
-          style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 20, background: modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)', color: modoOscuro ? '#fff' : '#000', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.2rem', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+          className="mosh-icon-btn"
+          style={{ position: 'absolute', top: '24px', right: '24px', zIndex: 20, background: modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)', color: t.text, border: `1px solid ${t.border}`, borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           title="Cambiar modo claro/oscuro"
         >
-          {modoOscuro ? '☀️' : '🌙'}
+          {modoOscuro ? '☀︎' : '☾'}
         </button>
 
-        <form onSubmit={manejarLogin} style={{ 
-          position: 'relative', zIndex: 10, 
-          background: modoOscuro ? 'rgba(24, 24, 24, 0.7)' : 'rgba(255, 255, 255, 0.8)', 
-          backdropFilter: 'blur(25px)',
-          border: modoOscuro ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0, 0, 0, 0.08)', 
-          padding: '48px 40px', borderRadius: '20px', boxShadow: modoOscuro ? '0 30px 60px rgba(0,0,0,0.8)' : '0 30px 60px rgba(0,0,0,0.12)', 
-          textAlign: 'center', width: '100%', maxWidth: '400px', color: modoOscuro ? 'white' : '#171717'
+        <form onSubmit={manejarLogin} style={{
+          position: 'relative', zIndex: 10,
+          background: modoOscuro ? 'rgba(27, 30, 35, 0.78)' : 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(28px)',
+          border: `1px solid ${t.border}`,
+          padding: '52px 34px', borderRadius: '22px', boxShadow: t.shadow,
+          textAlign: 'center', width: '100%', maxWidth: '408px', color: t.text, boxSizing: 'border-box'
         }}>
-          <h2 style={{ marginBottom: '6px', letterSpacing: '4px', fontWeight: '900', fontSize: '1.8rem' }}>MOSH</h2>
-          <p style={{ fontSize: '0.7rem', color: modoOscuro ? '#9ca3af' : '#6b7280', marginBottom: '32px', textTransform: 'uppercase', letterSpacing: '3px', fontWeight: '600' }}>Arquitectura y Diseño</p>
-          
+          <div style={{ width: '40px', height: '2px', background: PALETTE.blueprint, margin: '0 auto 22px' }}></div>
+          <h1 className="mosh-serif" style={{ margin: '0 0 6px', letterSpacing: '0.04em', fontWeight: '500', fontSize: '2rem', color: t.text }}>MOSH</h1>
+          <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: '36px', fontWeight: '500' }}>Arquitectura y Diseño — Portal de clientes</p>
+
           {errorLogin && (
-            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.9)', color: 'white', padding: '12px', borderRadius: '10px', fontSize: '0.85rem', marginBottom: '20px', fontWeight: '600' }}>
+            <div style={{ backgroundColor: PALETTE.dangerSoft, color: '#7A2E24', padding: '13px 14px', borderRadius: '10px', fontSize: '0.83rem', marginBottom: '22px', fontWeight: '600', textAlign: 'left' }}>
               {errorLogin}
             </div>
           )}
 
           <div style={{ marginBottom: '18px', textAlign: 'left' }}>
-            <label style={{ fontSize: '0.7rem', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Usuario</label>
-            <input 
+            <label style={labelStyle}>Usuario</label>
+            <input
               type="text" placeholder="Ingrese su usuario" value={inputUser} onChange={(e) => setInputUser(e.target.value)} required
-              style={{ width: '100%', padding: '14px 16px', boxSizing: 'border-box', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', outline: 'none', borderRadius: '10px', backgroundColor: modoOscuro ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', color: modoOscuro ? 'white' : '#171717', fontSize: '0.95rem' }}
+              className="mosh-input"
+              style={inputStyle}
             />
           </div>
 
-          <div style={{ marginBottom: '28px', textAlign: 'left' }}>
-            <label style={{ fontSize: '0.7rem', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Contraseña</label>
-            <input 
+          <div style={{ marginBottom: '30px', textAlign: 'left' }}>
+            <label style={labelStyle}>Contraseña</label>
+            <input
               type="password" placeholder="••••••••" value={inputPass} onChange={(e) => setInputPass(e.target.value)} required
-              style={{ width: '100%', padding: '14px 16px', boxSizing: 'border-box', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', outline: 'none', borderRadius: '10px', backgroundColor: modoOscuro ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)', color: modoOscuro ? 'white' : '#171717', fontSize: '0.95rem' }}
+              className="mosh-input"
+              style={inputStyle}
             />
           </div>
 
-          <button type="submit" disabled={cargandoLogin} style={{ width: '100%', padding: '14px', backgroundColor: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', letterSpacing: '0.5px', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-            {cargandoLogin ? 'Verificando...' : 'Acceder al Portal'}
+          <button type="submit" disabled={cargandoLogin} className="mosh-btn" style={{ width: '100%', padding: '15px', backgroundColor: PALETTE.blueprint, color: '#F7F5F1', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.35)' }}>
+            {cargandoLogin ? 'Verificando…' : 'Acceder al portal'}
           </button>
         </form>
       </div>
     );
   }
 
-  // --- INTERFAZ PRINCIPAL CON CARRUSEL POR AMBIENTE ---
+  // --- INTERFAZ PRINCIPAL RESPONSIVE ---
   return (
-    <div 
+    <div
+      className="mosh-scope"
       onContextMenu={(e) => e.preventDefault()}
-      style={{ 
+      style={{
         position: 'relative',
-        fontFamily: "'Inter', system-ui, sans-serif", minHeight: '100vh', 
-        backgroundColor: modoOscuro ? '#0a0a0a' : '#f8fafc', 
-        color: modoOscuro ? '#f3f4f6' : '#1e293b', 
-        userSelect: 'none', display: 'flex', overflowX: 'hidden'
+        fontFamily: FONT_SANS, minHeight: '100vh',
+        backgroundColor: t.bg,
+        color: t.text,
+        userSelect: 'none', display: 'flex', overflowX: 'hidden',
+        ...skelVars
       }}
     >
+      <GlobalStyles bgColor={t.bg} />
+      <ToastContainer toasts={toasts} onClose={cerrarToast} />
+
       {/* FONDO GLOBAL CON LOGOTIPO Y BLUR */}
       <div style={{
         position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0,
         backgroundImage: `url(${process.env.PUBLIC_URL}/LogotipoMosh-06.jpg.jpeg)`,
-        backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(30px)', opacity: modoOscuro ? 0.15 : 0.08, pointerEvents: 'none'
+        backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(34px)', opacity: modoOscuro ? 0.12 : 0.06, pointerEvents: 'none'
       }}></div>
 
       <div style={{
         position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0,
-        backgroundColor: modoOscuro ? 'rgba(10, 10, 10, 0.85)' : 'rgba(248, 250, 252, 0.88)', pointerEvents: 'none'
+        backgroundColor: modoOscuro ? 'rgba(20, 22, 26, 0.88)' : 'rgba(247, 245, 241, 0.92)', pointerEvents: 'none'
       }}></div>
 
+      {/* LIGHTBOX MODAL */}
+      {imagenZoom && (
+        <div
+          onClick={() => setImagenZoom(null)}
+          style={{
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 100,
+            backgroundColor: 'rgba(10, 11, 13, 0.92)', backdropFilter: 'blur(10px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '15px', boxSizing: 'border-box'
+          }}
+        >
+          <button
+            onClick={() => setImagenZoom(null)}
+            className="mosh-icon-btn"
+            style={{
+              position: 'absolute', top: '20px', right: '20px', background: 'rgba(255, 255, 255, 0.12)',
+              color: 'white', border: '1px solid rgba(255,255,255,0.18)', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer',
+              fontSize: '1.1rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 101
+            }}
+          >
+            ✕
+          </button>
+          <div style={{ width: '95vw', height: '85vh', maxWidth: '1100px', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <ImagenProtegida src={imagenZoom} alt="Vista ampliada" objectFit="contain" background="transparent" />
+          </div>
+        </div>
+      )}
+
       {/* BOTÓN FLOTANTE MÓVIL (HAMBURGUESA) */}
-      <button 
+      <button
         onClick={() => setMenuAbierto(!menuAbierto)}
+        className="mosh-icon-btn"
         style={{
           position: 'fixed', top: '16px', left: '16px', zIndex: 50,
-          background: modoOscuro ? 'rgba(30, 30, 30, 0.9)' : 'rgba(255, 255, 255, 0.9)',
-          backdropFilter: 'blur(10px)', color: modoOscuro ? '#fff' : '#0f172a',
-          border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+          background: modoOscuro ? 'rgba(27, 30, 35, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(10px)', color: t.text,
+          border: `1px solid ${t.border}`,
           borderRadius: '10px', width: '44px', height: '44px', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.15rem',
+          boxShadow: '0 6px 16px rgba(0,0,0,0.12)'
         }}
         title="Menú de navegación"
       >
@@ -409,84 +785,124 @@ function App() {
 
       {/* SIDEBAR LATERAL IZQUIERDO */}
       <aside style={{
-        position: 'fixed', top: 0, left: menuAbierto ? 0 : '-280px', width: '280px', height: '100vh', zIndex: 40,
-        backgroundColor: modoOscuro ? 'rgba(20, 20, 20, 0.92)' : 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)', borderRight: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '30px 20px', boxSizing: 'border-box',
+        position: 'fixed', top: 0, left: menuAbierto ? 0 : '-284px', width: '284px', height: '100vh', zIndex: 40,
+        backgroundColor: modoOscuro ? 'rgba(23, 25, 30, 0.97)' : 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(22px)', borderRight: `1px solid ${t.border}`,
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '32px 20px', boxSizing: 'border-box',
         transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: menuAbierto ? '10px 0 30px rgba(0,0,0,0.5)' : 'none'
+        boxShadow: menuAbierto ? '14px 0 36px rgba(0,0,0,0.35)' : 'none'
       }}>
         <div>
-          <div style={{ marginBottom: '35px', paddingLeft: '45px' }}>
-            <h2 style={{ fontSize: '1.25rem', margin: 0, letterSpacing: '3px', fontWeight: '900', color: modoOscuro ? '#fff' : '#0f172a' }}>MOSH</h2>
-            <p style={{ fontSize: '0.65rem', color: modoOscuro ? '#9ca3af' : '#64748b', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '2px', fontWeight: '700' }}>Arquitectura y Diseño</p>
+          <div style={{ marginBottom: '38px', paddingLeft: '46px' }}>
+            <h2 className="mosh-serif" style={{ fontSize: '1.35rem', margin: 0, letterSpacing: '0.03em', fontWeight: '500', color: t.text }}>MOSH</h2>
+            <p style={{ fontSize: '0.65rem', color: t.textMuted, margin: '5px 0 0 0', fontWeight: '600' }}>Arquitectura y Diseño</p>
           </div>
 
-          {rolUsuario === 'admin' && (
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <span style={{ fontSize: '0.65rem', fontWeight: '800', color: modoOscuro ? '#6b7280' : '#94a3b8', paddingLeft: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', marginBottom: '4px' }}>Panel de Control</span>
-              
-              <button onClick={() => { setVista('proyectos'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'proyectos' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'proyectos' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
-                📁 Ver Proyectos
-              </button>
-              
-              <button onClick={() => { setVista('subir'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'subir' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'subir' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
-                ➕ Subir Nuevo Render
-              </button>
-              
-              <button onClick={() => { setVista('crear_usuario'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'crear_usuario' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'crear_usuario' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
-                👤 Crear Cuenta
-              </button>
-              
-              <button onClick={() => { setVista('gestionar_usuarios'); setMenuAbierto(false); }} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 14px', background: vista === 'gestionar_usuarios' ? (modoOscuro ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)') : 'transparent', color: vista === 'gestionar_usuarios' ? (modoOscuro ? '#fff' : '#0f172a') : (modoOscuro ? '#9ca3af' : '#475569'), border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.9rem', textAlign: 'left', transition: 'all 0.2s' }}>
-                👥 Gestionar Usuarios
-              </button>
-            </nav>
-          )}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '0.65rem', fontWeight: '700', color: t.textFaint, paddingLeft: '12px', marginBottom: '8px' }}>Navegación</span>
+
+            <button onClick={() => { setVista('proyectos'); setMenuAbierto(false); }} className={`mosh-nav-btn ${t.navClass}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '44px', padding: '12px 14px', background: vista === 'proyectos' ? (modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)') : 'transparent', color: vista === 'proyectos' ? PALETTE.blueprintLight : t.textMuted, border: 'none', borderLeft: vista === 'proyectos' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textAlign: 'left' }}>
+              Ver proyectos
+            </button>
+
+            <button onClick={() => { setVista('timeline'); setMenuAbierto(false); }} className={`mosh-nav-btn ${t.navClass}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '44px', padding: '12px 14px', background: vista === 'timeline' ? (modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)') : 'transparent', color: vista === 'timeline' ? PALETTE.blueprintLight : t.textMuted, border: 'none', borderLeft: vista === 'timeline' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textAlign: 'left' }}>
+              Actividad / Timeline
+            </button>
+
+            {rolUsuario === 'admin' && (
+              <>
+                <span style={{ fontSize: '0.65rem', fontWeight: '700', color: t.textFaint, paddingLeft: '12px', margin: '18px 0 8px 0' }}>Panel de control</span>
+
+                <button onClick={() => { setVista('subir'); setMenuAbierto(false); }} className={`mosh-nav-btn ${t.navClass}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '44px', padding: '12px 14px', background: vista === 'subir' ? (modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)') : 'transparent', color: vista === 'subir' ? PALETTE.blueprintLight : t.textMuted, border: 'none', borderLeft: vista === 'subir' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textAlign: 'left' }}>
+                  Subir nuevo render
+                </button>
+
+                <button onClick={() => { setVista('crear_usuario'); setMenuAbierto(false); }} className={`mosh-nav-btn ${t.navClass}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '44px', padding: '12px 14px', background: vista === 'crear_usuario' ? (modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)') : 'transparent', color: vista === 'crear_usuario' ? PALETTE.blueprintLight : t.textMuted, border: 'none', borderLeft: vista === 'crear_usuario' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textAlign: 'left' }}>
+                  Crear cuenta
+                </button>
+
+                <button onClick={() => { setVista('gestionar_usuarios'); setMenuAbierto(false); }} className={`mosh-nav-btn ${t.navClass}`} style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', minHeight: '44px', padding: '12px 14px', background: vista === 'gestionar_usuarios' ? (modoOscuro ? 'rgba(255,255,255,0.08)' : 'rgba(20,22,26,0.05)') : 'transparent', color: vista === 'gestionar_usuarios' ? PALETTE.blueprintLight : t.textMuted, border: 'none', borderLeft: vista === 'gestionar_usuarios' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.88rem', textAlign: 'left' }}>
+                  Gestionar usuarios
+                </button>
+              </>
+            )}
+          </nav>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '20px' }}>
-          <button 
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', borderTop: `1px solid ${t.borderSoft}`, paddingTop: '20px' }}>
+          <button
             onClick={toggleTema}
-            style={{ width: '100%', padding: '10px 14px', background: modoOscuro ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', color: modoOscuro ? '#e2e8f0' : '#334155', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            className={`mosh-nav-btn ${t.navClass}`}
+            style={{ width: '100%', minHeight: '44px', padding: '10px 14px', background: modoOscuro ? 'rgba(255,255,255,0.05)' : 'rgba(20,22,26,0.03)', color: t.text, border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.82rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
           >
-            {modoOscuro ? '☀️ Modo Claro' : '🌙 Modo Oscuro'}
+            {modoOscuro ? '☀︎ Modo claro' : '☾ Modo oscuro'}
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: modoOscuro ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.03)', padding: '10px 14px', borderRadius: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: modoOscuro ? 'rgba(0,0,0,0.22)' : 'rgba(20,22,26,0.03)', padding: '10px 14px', borderRadius: '10px' }}>
             <div style={{ overflow: 'hidden' }}>
-              <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: modoOscuro ? '#fff' : '#0f172a', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{usuarioLogueado}</span>
-              <span style={{ display: 'block', fontSize: '0.7rem', color: modoOscuro ? '#9ca3af' : '#64748b', textTransform: 'uppercase', fontWeight: '600' }}>{rolUsuario}</span>
+              <span style={{ display: 'block', fontSize: '0.84rem', fontWeight: '700', color: t.text, textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{usuarioLogueado}</span>
+              <span style={{ display: 'block', fontSize: '0.68rem', color: t.textMuted, fontWeight: '600' }}>{rolUsuario === 'admin' ? 'Administrador' : 'Cliente'}</span>
             </div>
-            <button onClick={cerrarSesion} style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' }} title="Cerrar Sesión">Salir</button>
+            <button onClick={cerrarSesion} className="mosh-btn" style={{ background: PALETTE.danger, color: 'white', border: 'none', borderRadius: '7px', padding: '9px 12px', minHeight: '38px', cursor: 'pointer', fontWeight: '700', fontSize: '0.72rem' }} title="Cerrar Sesión">Salir</button>
           </div>
         </div>
       </aside>
 
-      {/* CONTENIDO PRINCIPAL */}
-      <main style={{ position: 'relative', zIndex: 10, flex: 1, padding: '40px 30px 40px 80px', boxSizing: 'border-box', overflowY: 'auto', maxHeight: '100vh' }}>
-        <div style={{ maxWidth: '950px', margin: '0 auto' }}>
+      {/* CONTENIDO PRINCIPAL ADAPTADO A MÓVIL */}
+      <main className="mosh-scroll" style={{ position: 'relative', zIndex: 10, flex: 1, padding: esMovil ? '78px 14px 40px 14px' : '40px 30px 40px 80px', boxSizing: 'border-box', overflowY: 'auto', maxHeight: '100vh', width: '100%' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
 
-          {/* VISTA: GESTIONAR USUARIOS */}
-          {rolUsuario === 'admin' && vista === 'gestionar_usuarios' ? (
-            <div style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', padding: '32px', borderRadius: '20px', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.6)' : '0 20px 40px rgba(0,0,0,0.06)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-              <h3 style={{ marginTop: 0, color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.4rem', fontWeight: '800' }}>Gestión de Usuarios y Roles</h3>
-              <p style={{ fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b', marginBottom: '24px' }}>Modifica el rol de cualquier usuario al instante usando el menú desplegable.</p>
+          {/* VISTA: TIMELINE / HISTORIAL DE ACTIVIDAD */}
+          {vista === 'timeline' ? (
+            <div style={panelStyle}>
+              <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Historial y línea de tiempo del proyecto</h3>
+              <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Registro transparente de avances, estados y comentarios recientes en los ambientes.</p>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {cargandoProyectos ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="mosh-skeleton" style={{ height: '92px', borderRadius: '10px' }} />
+                  ))}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {proyectos.map((p, idx) => (
+                    <div key={idx} style={{ padding: '16px 20px', background: modoOscuro ? 'rgba(255,255,255,0.025)' : 'rgba(20,22,26,0.02)', borderRadius: '10px', borderLeft: `3px solid ${p.estado === 'Aprobado' ? PALETTE.moss : PALETTE.ochre}`, border: `1px solid ${t.borderSoft}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                        <span style={{ fontWeight: '700', color: t.text, fontSize: '0.92rem' }}>Ambiente: {p.ambiente || 'General'} ({p.titulo})</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: '700', color: p.estado === 'Aprobado' ? PALETTE.moss : PALETTE.ochre }}>{p.estado}</span>
+                      </div>
+                      <p style={{ margin: '4px 0 8px 0', fontSize: '0.84rem', color: t.textMuted }}>Cliente asignado: <strong style={{ color: t.text }}>{p.cliente}</strong></p>
+                      {p.comentarios && (
+                        <div style={{ fontSize: '0.8rem', background: modoOscuro ? 'rgba(0,0,0,0.25)' : '#F3F1EC', padding: '10px 12px', borderRadius: '8px', color: t.textMuted, whiteSpace: 'pre-line' }}>
+                          <strong style={{ color: t.text }}>Última retroalimentación:</strong><br />{p.comentarios}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : rolUsuario === 'admin' && vista === 'gestionar_usuarios' ? (
+            <div style={panelStyle}>
+              <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Gestión de usuarios y roles</h3>
+              <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Modifica el rol de cualquier usuario al instante usando el menú desplegable.</p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {todosLosUsuarios.map(u => (
-                  <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: modoOscuro ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.04)' }}>
+                  <div key={u.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: modoOscuro ? 'rgba(255,255,255,0.025)' : 'rgba(20,22,26,0.02)', borderRadius: '10px', border: `1px solid ${t.borderSoft}`, flexWrap: 'wrap', gap: '10px' }}>
                     <div>
-                      <span style={{ fontWeight: '800', fontSize: '1rem', color: modoOscuro ? '#fff' : '#0f172a' }}>{u.username}</span>
-                      <span style={{ display: 'block', fontSize: '0.75rem', color: modoOscuro ? '#9ca3af' : '#64748b', marginTop: '2px' }}>Contraseña: {u.password}</span>
+                      <span style={{ fontWeight: '700', fontSize: '0.98rem', color: t.text }}>{u.username}</span>
+                      <span style={{ display: 'block', fontSize: '0.72rem', color: t.textFaint, marginTop: '2px' }}>Contraseña: {u.password}</span>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '0.8rem', color: modoOscuro ? '#9ca3af' : '#64748b', fontWeight: '600' }}>Rol actual:</span>
-                      <select 
-                        value={u.rol} 
+                      <span style={{ fontSize: '0.78rem', color: t.textMuted, fontWeight: '600' }}>Rol:</span>
+                      <select
+                        value={u.rol}
                         onChange={(e) => cambiarRolUsuario(u.id, e.target.value)}
-                        style={{ padding: '8px 12px', borderRadius: '8px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', backgroundColor: modoOscuro ? '#1a1a1a' : '#ffffff', fontWeight: '700', color: modoOscuro ? '#fff' : '#0f172a', outline: 'none' }}
+                        className="mosh-input"
+                        style={{ padding: '8px 12px', borderRadius: '8px', border: `1px solid ${t.border}`, backgroundColor: t.field, fontWeight: '600', color: t.text, outline: 'none' }}
                       >
                         <option value="cliente">Cliente</option>
                         <option value="admin">Administrador</option>
@@ -497,101 +913,120 @@ function App() {
               </div>
             </div>
           ) : rolUsuario === 'admin' && vista === 'subir' ? (
-            /* VISTA: SUBIR PROYECTO Y CREAR AMBIENTE */
-            <form onSubmit={agregarProyecto} style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', padding: '32px', borderRadius: '20px', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.6)' : '0 20px 40px rgba(0,0,0,0.06)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-              <h3 style={{ marginTop: 0, color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.4rem', fontWeight: '800' }}>Subir Render, Asignar Ambiente y Cliente</h3>
-              <p style={{ fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b', marginBottom: '24px' }}>Carga el contenido visual y asigne los parámetros de diseño correspondientes.</p>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Título del Proyecto / Diseño</label>
-                <input type="text" placeholder="Ej. Casa de Playa - Residencia" value={nuevoTitulo} onChange={(e) => setNuevoTitulo(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }} />
+            <form onSubmit={agregarProyecto} style={panelStyle}>
+              <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Subir render, versión y ambiente</h3>
+              <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Carga el contenido visual, selecciona su versión y asigna el ambiente.</p>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Título del proyecto / diseño</label>
+                <input type="text" placeholder="Ej. Casa de Playa - Residencia" value={nuevoTitulo} onChange={(e) => setNuevoTitulo(e.target.value)} required className="mosh-input" style={inputStyle} />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Seleccionar Cliente Destino</label>
-                <select 
-                  value={nuevoClienteSeleccionado} 
-                  onChange={(e) => setNuevoClienteSeleccionado(e.target.value)} 
-                  required 
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', backgroundColor: modoOscuro ? '#1a1a1a' : 'white', color: modoOscuro ? '#fff' : '#000', outline: 'none', fontWeight: '600' }}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Versión de entrega</label>
+                <select
+                  value={nuevaVersion}
+                  onChange={(e) => setNuevaVersion(e.target.value)}
+                  required
+                  className="mosh-input"
+                  style={{ ...inputStyle, fontWeight: '600' }}
                 >
-                  <option value="">-- Selecciona un cliente de la lista --</option>
+                  <option value="Versión 1">Versión 1</option>
+                  <option value="Versión 2">Versión 2</option>
+                  <option value="Versión 3">Versión 3</option>
+                  <option value="Revisión Final">Revisión Final</option>
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Seleccionar cliente destino</label>
+                <select
+                  value={nuevoClienteSeleccionado}
+                  onChange={(e) => setNuevoClienteSeleccionado(e.target.value)}
+                  required
+                  className="mosh-input"
+                  style={{ ...inputStyle, fontWeight: '600' }}
+                >
+                  <option value="">— Selecciona un cliente —</option>
                   {listaClientes.map((c, index) => (
                     <option key={index} value={c.username}>{c.username}</option>
                   ))}
                 </select>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Ambiente (Creación libre)</label>
-                <input 
-                  type="text" 
-                  placeholder="Ej. Sala, Cocina, Cuarto 1, Terraza, Baño principal..." 
-                  value={nuevoAmbiente} 
-                  onChange={(e) => setNuevoAmbiente(e.target.value)} 
-                  required 
-                  style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }} 
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Ambiente (creación libre)</label>
+                <input
+                  type="text"
+                  placeholder="Ej. Sala, Cocina, Cuarto 1, Terraza..."
+                  value={nuevoAmbiente}
+                  onChange={(e) => setNuevoAmbiente(e.target.value)}
+                  required
+                  className="mosh-input"
+                  style={inputStyle}
                 />
-                <small style={{ display: 'block', marginTop: '6px', color: modoOscuro ? '#9ca3af' : '#64748b', fontSize: '0.8rem' }}>Escribe libremente el nombre del ambiente al que pertenece este render.</small>
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>URL de la Imagen / Render</label>
-                <input type="text" placeholder="https://..." value={nuevaImagen} onChange={(e) => setNuevaImagen(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }} />
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>URL de la imagen / render</label>
+                <input type="text" placeholder="https://..." value={nuevaImagen} onChange={(e) => setNuevaImagen(e.target.value)} required className="mosh-input" style={inputStyle} />
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Descripción</label>
-                <textarea value={nuevaDesc} onChange={(e) => setNuevaDesc(e.target.value)} rows="3" style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }}></textarea>
+              <div style={{ marginBottom: '26px' }}>
+                <label style={labelStyle}>Descripción</label>
+                <textarea value={nuevaDesc} onChange={(e) => setNuevaDesc(e.target.value)} rows="3" className="mosh-input" style={{ ...inputStyle, resize: 'vertical', fontFamily: FONT_SANS }}></textarea>
               </div>
 
-              <button type="submit" style={{ backgroundColor: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', padding: '14px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>Guardar y Asignar Render</button>
+              <button type="submit" disabled={guardandoProyecto} className="mosh-btn" style={{ backgroundColor: PALETTE.blueprint, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.3)', width: '100%', opacity: guardandoProyecto ? 0.75 : 1 }}>
+                {guardandoProyecto ? 'Guardando…' : 'Guardar y asignar render'}
+              </button>
             </form>
           ) : rolUsuario === 'admin' && vista === 'crear_usuario' ? (
-            /* VISTA: CREAR USUARIO */
-            <form onSubmit={crearUsuarioNuevo} style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', padding: '32px', borderRadius: '20px', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.6)' : '0 20px 40px rgba(0,0,0,0.06)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-              <h3 style={{ marginTop: 0, color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.4rem', fontWeight: '800' }}>Crear Nuevo Usuario o Cliente</h3>
-              <p style={{ fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b', marginBottom: '24px' }}>Registra una nueva cuenta de acceso para un cliente o administrador.</p>
-              
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Nombre de Usuario</label>
-                <input type="text" placeholder="Ej. Carlos Pérez" value={nuevoUsuarioNombre} onChange={(e) => setNuevoUsuarioNombre(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }} />
+            <form onSubmit={crearUsuarioNuevo} style={panelStyle}>
+              <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Crear nuevo usuario o cliente</h3>
+              <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Registra una nueva cuenta de acceso para un cliente o administrador.</p>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Nombre de usuario</label>
+                <input type="text" placeholder="Ej. Carlos Pérez" value={nuevoUsuarioNombre} onChange={(e) => setNuevoUsuarioNombre(e.target.value)} required className="mosh-input" style={inputStyle} />
               </div>
 
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Contraseña</label>
-                <input type="text" placeholder="Ej. CLAVE123" value={nuevoUsuarioPass} onChange={(e) => setNuevoUsuarioPass(e.target.value)} required style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', outline: 'none' }} />
+              <div style={{ marginBottom: '18px' }}>
+                <label style={labelStyle}>Contraseña</label>
+                <input type="text" placeholder="Ej. CLAVE123" value={nuevoUsuarioPass} onChange={(e) => setNuevoUsuarioPass(e.target.value)} required className="mosh-input" style={inputStyle} />
               </div>
 
-              <div style={{ marginBottom: '24px' }}>
-                <label style={{ fontSize: '0.75rem', display: 'block', marginBottom: '6px', fontWeight: '800', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px' }}>Rol Inicial</label>
-                <select value={nuevoUsuarioRol} onChange={(e) => setNuevoUsuarioRol(e.target.value)} style={{ width: '100%', padding: '12px 16px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', backgroundColor: modoOscuro ? '#1a1a1a' : 'white', color: modoOscuro ? '#fff' : '#000', outline: 'none', fontWeight: '600' }}>
+              <div style={{ marginBottom: '26px' }}>
+                <label style={labelStyle}>Rol inicial</label>
+                <select value={nuevoUsuarioRol} onChange={(e) => setNuevoUsuarioRol(e.target.value)} className="mosh-input" style={{ ...inputStyle, fontWeight: '600' }}>
                   <option value="cliente">Cliente</option>
                   <option value="admin">Administrador</option>
                 </select>
               </div>
 
-              <button type="submit" style={{ backgroundColor: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', padding: '14px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>Registrar en Supabase</button>
+              <button type="submit" disabled={creandoUsuario} className="mosh-btn" style={{ backgroundColor: PALETTE.blueprint, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.3)', width: '100%', opacity: creandoUsuario ? 0.75 : 1 }}>
+                {creandoUsuario ? 'Registrando…' : 'Registrar en Supabase'}
+              </button>
             </form>
           ) : (
-            /* VISTA: LISTA DE AMBIENTES AGRUPADOS CON CARRUSEL */
+            /* VISTA: LISTA DE AMBIENTES CON PESTAÑAS DE ESTADO Y FILTROS */
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', flexWrap: 'wrap', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: esMovil ? 'flex-start' : 'center', marginBottom: '22px', flexDirection: esMovil ? 'column' : 'row', gap: '16px' }}>
                 <div>
-                  <h2 style={{ color: modoOscuro ? '#fff' : '#0f172a', margin: '0 0 4px 0', fontSize: '1.6rem', fontWeight: '900' }}>
-                    {rolUsuario === 'admin' ? 'Todos los Ambientes y Renders' : 'Tus Ambientes Asignados'}
+                  <h2 className="mosh-serif" style={{ color: t.text, margin: '0 0 5px 0', fontSize: esMovil ? '1.5rem' : '1.8rem', fontWeight: '500' }}>
+                    {rolUsuario === 'admin' ? 'Todos los ambientes y renders' : 'Tus ambientes asignados'}
                   </h2>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: modoOscuro ? '#9ca3af' : '#64748b' }}>Navega entre los diseños de cada ambiente y aprueba en conjunto.</p>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: t.textMuted }}>Filtra por estado o ambiente y haz clic en las imágenes para ampliar.</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  {/* FILTRO DE AMBIENTE */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', padding: '8px 14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-                    <span style={{ fontSize: '0.75rem', fontWeight: '800', color: modoOscuro ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Ambiente:</span>
-                    <select 
-                      value={filtroAmbienteCliente} 
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: esMovil ? '100%' : 'auto' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: t.surface, backdropFilter: 'blur(10px)', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${t.border}`, flex: esMovil ? '1' : 'unset' }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: '700', color: t.textMuted }}>Ambiente:</span>
+                    <select
+                      value={filtroAmbienteCliente}
                       onChange={(e) => setFiltroAmbienteCliente(e.target.value)}
-                      style={{ padding: '6px 10px', borderRadius: '8px', border: 'none', backgroundColor: modoOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9', fontWeight: '700', color: modoOscuro ? '#fff' : '#0f172a', outline: 'none', fontSize: '0.85rem' }}
+                      className="mosh-input"
+                      style={{ padding: '6px 10px', borderRadius: '7px', border: 'none', backgroundColor: modoOscuro ? 'rgba(255,255,255,0.07)' : 'rgba(20,22,26,0.04)', fontWeight: '700', color: t.text, outline: 'none', fontSize: '0.84rem', flex: esMovil ? '1' : 'unset' }}
                     >
                       <option value="">Todos</option>
                       {ambientesDisponibles.map((amb, index) => (
@@ -601,12 +1036,13 @@ function App() {
                   </div>
 
                   {rolUsuario === 'admin' && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)', padding: '8px 14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '800', color: modoOscuro ? '#9ca3af' : '#64748b', textTransform: 'uppercase' }}>Cliente:</span>
-                      <select 
-                        value={filtroClienteAdmin} 
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: t.surface, backdropFilter: 'blur(10px)', padding: '8px 14px', borderRadius: '10px', border: `1px solid ${t.border}`, flex: esMovil ? '1' : 'unset' }}>
+                      <span style={{ fontSize: '0.68rem', fontWeight: '700', color: t.textMuted }}>Cliente:</span>
+                      <select
+                        value={filtroClienteAdmin}
                         onChange={(e) => setFiltroClienteAdmin(e.target.value)}
-                        style={{ padding: '6px 10px', borderRadius: '8px', border: 'none', backgroundColor: modoOscuro ? 'rgba(255,255,255,0.08)' : '#f1f5f9', fontWeight: '700', color: modoOscuro ? '#fff' : '#0f172a', outline: 'none', fontSize: '0.85rem' }}
+                        className="mosh-input"
+                        style={{ padding: '6px 10px', borderRadius: '7px', border: 'none', backgroundColor: modoOscuro ? 'rgba(255,255,255,0.07)' : 'rgba(20,22,26,0.04)', fontWeight: '700', color: t.text, outline: 'none', fontSize: '0.84rem', flex: esMovil ? '1' : 'unset' }}
                       >
                         <option value="">Todos</option>
                         {listaClientes.map((c, index) => (
@@ -617,159 +1053,199 @@ function App() {
                   )}
                 </div>
               </div>
-              
+
+              {/* PESTAÑAS DE FILTRO RÁPIDO POR ESTADO */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '26px', overflowX: 'auto', paddingBottom: '4px', borderBottom: `1px solid ${t.borderSoft}` }}>
+                <button
+                  onClick={() => setFiltroEstadoTab('todos')}
+                  className="mosh-tab"
+                  style={{ padding: '10px 6px', borderRadius: '0', border: 'none', borderBottom: filtroEstadoTab === 'todos' ? `2px solid ${PALETTE.blueprint}` : '2px solid transparent', background: 'transparent', color: filtroEstadoTab === 'todos' ? t.text : t.textMuted, fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', marginRight: '10px' }}
+                >
+                  Todos
+                </button>
+                <button
+                  onClick={() => setFiltroEstadoTab('revision')}
+                  className="mosh-tab"
+                  style={{ padding: '10px 6px', borderRadius: '0', border: 'none', borderBottom: filtroEstadoTab === 'revision' ? `2px solid ${PALETTE.ochre}` : '2px solid transparent', background: 'transparent', color: filtroEstadoTab === 'revision' ? PALETTE.ochre : t.textMuted, fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap', marginRight: '10px' }}
+                >
+                  En revisión
+                </button>
+                <button
+                  onClick={() => setFiltroEstadoTab('aprobados')}
+                  className="mosh-tab"
+                  style={{ padding: '10px 6px', borderRadius: '0', border: 'none', borderBottom: filtroEstadoTab === 'aprobados' ? `2px solid ${PALETTE.moss}` : '2px solid transparent', background: 'transparent', color: filtroEstadoTab === 'aprobados' ? PALETTE.moss : t.textMuted, fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  Aprobados
+                </button>
+              </div>
+
               {cargandoProyectos ? (
-                <p style={{ textAlign: 'center', color: modoOscuro ? '#9ca3af' : '#64748b', padding: '40px 0' }}>Cargando proyectos...</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px' }}>
+                  <SkeletonAmbienteCard t={t} esMovil={esMovil} />
+                  <SkeletonAmbienteCard t={t} esMovil={esMovil} />
+                </div>
               ) : Object.keys(ambientesAgrupados).length === 0 ? (
-                <p style={{ textAlign: 'center', color: modoOscuro ? '#9ca3af' : '#64748b', padding: '40px 0' }}>No hay ambientes encontrados para este filtro.</p>
+                <p style={{ textAlign: 'center', color: t.textMuted, padding: '40px 0' }}>No hay ambientes encontrados para este filtro.</p>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '35px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '28px' }}>
                   {Object.entries(ambientesAgrupados).map(([nombreAmbiente, listaRenders]) => {
                     const indiceActual = indicesCarrusel[nombreAmbiente] || 0;
                     const renderActual = listaRenders[indiceActual] || listaRenders[0];
                     const estadoAmbiente = renderActual.estado || 'En revisión';
 
                     return (
-                      <div key={nombreAmbiente} style={{ background: modoOscuro ? 'rgba(22, 22, 22, 0.75)' : 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', borderRadius: '20px', overflow: 'hidden', boxShadow: modoOscuro ? '0 20px 40px rgba(0,0,0,0.5)' : '0 20px 40px rgba(0,0,0,0.05)', border: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)' }}>
-                        
+                      <div key={nombreAmbiente} className="mosh-card" style={{ background: t.surface, backdropFilter: 'blur(20px)', borderRadius: '16px', overflow: 'hidden', boxShadow: t.shadow, border: `1px solid ${t.border}` }}>
+
                         {/* CABECERA DE AMBIENTE */}
-                        <div style={{ padding: '20px 24px 0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                            <span style={{ fontSize: '0.8rem', background: modoOscuro ? 'rgba(255,255,255,0.1)' : '#e2e8f0', color: modoOscuro ? '#fff' : '#0f172a', padding: '6px 14px', borderRadius: '8px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                              🏠 {nombreAmbiente}
+                        <div style={{ padding: '18px 18px 0 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span className="mosh-serif" style={{ fontSize: '1.05rem', color: t.text, fontWeight: '500' }}>
+                              {nombreAmbiente}
                             </span>
-                            <span style={{ fontSize: '0.75rem', color: modoOscuro ? '#9ca3af' : '#64748b', fontWeight: '700' }}>
-                              Cliente: {renderActual.cliente}
+                            <span style={{ fontSize: '0.72rem', color: t.textFaint, fontWeight: '600' }}>
+                              · Cliente: {renderActual.cliente}
                             </span>
                           </div>
 
-                          <span style={{ 
-                            fontSize: '0.8rem', padding: '6px 14px', borderRadius: '8px', fontWeight: '900',
-                            backgroundColor: estadoAmbiente === 'Aprobado' ? (modoOscuro ? 'rgba(6, 78, 59, 0.6)' : '#dcfce7') : (modoOscuro ? 'rgba(113, 63, 18, 0.6)' : '#fef9c3'),
-                            color: estadoAmbiente === 'Aprobado' ? (modoOscuro ? '#6ee7b7' : '#166534') : (modoOscuro ? '#fde047' : '#854d0e')
+                          <span style={{
+                            fontSize: '0.72rem', padding: '5px 12px', borderRadius: '20px', fontWeight: '700',
+                            backgroundColor: estadoAmbiente === 'Aprobado' ? (modoOscuro ? 'rgba(76,122,93,0.22)' : PALETTE.mossSoft) : (modoOscuro ? 'rgba(176,138,62,0.2)' : PALETTE.ochreSoft),
+                            color: estadoAmbiente === 'Aprobado' ? (modoOscuro ? '#8FC3A4' : '#2F5940') : (modoOscuro ? '#E0BD7C' : '#7A5E27')
                           }}>
-                            Estado: {estadoAmbiente}
+                            {estadoAmbiente}
                           </span>
                         </div>
 
-                        {/* CONTENEDOR DEL CARRUSEL DE IMÁGENES */}
-                        <div style={{ position: 'relative', width: '100%', height: '400px', backgroundColor: '#09090b', marginTop: '16px' }}>
-                          <img 
-                            src={renderActual.imagen} 
-                            alt={renderActual.titulo} 
-                            draggable="false" 
-                            style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} 
+                        {/* CONTENEDOR DEL CARRUSEL CON PROTECCIÓN, LAZY LOAD Y ETIQUETA DE VERSIÓN */}
+                        <div style={{ position: 'relative', width: '100%', height: esMovil ? '260px' : '400px', backgroundColor: '#0C0D0F', marginTop: '14px' }}>
+                          <ImagenProtegida
+                            src={renderActual.imagen}
+                            alt={renderActual.titulo}
+                            onClick={() => setImagenZoom(renderActual.imagen)}
+                            objectFit="contain"
                           />
-                          
+
+                          {/* ETIQUETA FLOTANTE DE VERSIÓN */}
                           <div style={{
-                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-25deg)',
-                            color: 'rgba(255, 255, 255, 0.3)', fontSize: '1.5rem', fontWeight: '900', textAlign: 'center',
-                            pointerEvents: 'none', zIndex: '3', width: '100%', textShadow: '0 2px 8px rgba(0,0,0,0.8)', lineHeight: '1.5', letterSpacing: '2px'
+                            position: 'absolute', top: '12px', right: '12px', zIndex: 10, pointerEvents: 'none',
+                            background: 'rgba(0, 0, 0, 0.72)', backdropFilter: 'blur(8px)', padding: '5px 12px', borderRadius: '7px',
+                            color: PALETTE.blueprintLight, fontSize: '0.72rem', fontWeight: '700', border: '1px solid rgba(255,255,255,0.12)'
                           }}>
-                            MOSH<br/>
-                            MOSH ARQUITECTURA Y DISEÑO<br/>
-                            <span style={{ fontSize: '0.9rem', fontWeight: '700' }}>Visualizado por: {usuarioLogueado}</span>
+                            {renderActual.titulo.includes('(') ? renderActual.titulo.match(/\(([^)]+)\)$/)?.[1] || 'Versión 1' : 'Versión 1'}
                           </div>
 
-                          {/* FLECHAS DE NAVEGACIÓN DEL CARRUSEL (SI HAY MÁS DE 1 IMAGEN) */}
+                          <div style={{
+                            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%) rotate(-25deg)',
+                            color: 'rgba(255, 255, 255, 0.22)', fontSize: esMovil ? '1rem' : '1.4rem', fontWeight: '700', textAlign: 'center',
+                            pointerEvents: 'none', zIndex: '3', width: '100%', textShadow: '0 2px 8px rgba(0,0,0,0.8)', lineHeight: '1.4', letterSpacing: '1px', fontFamily: FONT_SERIF
+                          }}>
+                            MOSH<br />
+                            MOSH Arquitectura y Diseño<br />
+                            <span style={{ fontSize: '0.72rem', fontWeight: '600', fontFamily: FONT_SANS }}>Visualizado por: {usuarioLogueado}</span>
+                          </div>
+
                           {listaRenders.length > 1 && (
                             <>
-                              <button 
+                              <button
                                 onClick={() => cambiarIndiceCarrusel(nombreAmbiente, -1, listaRenders.length)}
+                                className="mosh-arrow"
                                 style={{
-                                  position: 'absolute', top: '50%', left: '16px', transform: 'translateY(-50%)', zIndex: 10,
-                                  background: 'rgba(0, 0, 0, 0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
-                                  borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.2rem',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                                  position: 'absolute', top: '50%', left: '10px', transform: 'translateY(-50%)', zIndex: 10,
+                                  background: 'rgba(0, 0, 0, 0.55)', color: 'white', border: '1px solid rgba(255,255,255,0.18)',
+                                  borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', fontSize: '0.95rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}
-                                title="Imagen anterior"
                               >
                                 ❮
                               </button>
 
-                              <button 
+                              <button
                                 onClick={() => cambiarIndiceCarrusel(nombreAmbiente, 1, listaRenders.length)}
+                                className="mosh-arrow"
                                 style={{
-                                  position: 'absolute', top: '50%', right: '16px', transform: 'translateY(-50%)', zIndex: 10,
-                                  background: 'rgba(0, 0, 0, 0.6)', color: 'white', border: '1px solid rgba(255,255,255,0.2)',
-                                  borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', fontSize: '1.2rem',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                                  position: 'absolute', top: '50%', right: '10px', transform: 'translateY(-50%)', zIndex: 10,
+                                  background: 'rgba(0, 0, 0, 0.55)', color: 'white', border: '1px solid rgba(255,255,255,0.18)',
+                                  borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', fontSize: '0.95rem',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}
-                                title="Imagen siguiente"
                               >
                                 ❯
                               </button>
 
-                              {/* INDICADOR DE POSICIÓN Y TÍTULO DE LA IMAGEN ACTUAL */}
                               <div style={{
-                                position: 'absolute', bottom: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10,
-                                background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', padding: '6px 16px', borderRadius: '20px',
-                                color: 'white', fontSize: '0.8rem', fontWeight: '700', border: '1px solid rgba(255,255,255,0.15)',
-                                display: 'flex', gap: '8px', alignItems: 'center'
+                                position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none',
+                                background: 'rgba(0, 0, 0, 0.72)', backdropFilter: 'blur(8px)', padding: '5px 12px', borderRadius: '20px',
+                                color: 'white', fontSize: '0.72rem', fontWeight: '600', border: '1px solid rgba(255,255,255,0.12)',
+                                display: 'flex', gap: '6px', alignItems: 'center'
                               }}>
                                 <span>{renderActual.titulo}</span>
-                                <span style={{ opacity: 0.6 }}>|</span>
-                                <span style={{ color: '#38bdf8' }}>{indiceActual + 1} / {listaRenders.length}</span>
+                                <span style={{ opacity: 0.5 }}>·</span>
+                                <span style={{ color: PALETTE.blueprintLight }}>{indiceActual + 1} / {listaRenders.length}</span>
                               </div>
                             </>
                           )}
                         </div>
 
-                        {/* DETALLES Y ACCIONES DEL AMBIENTE */}
-                        <div style={{ padding: '24px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', gap: '10px' }}>
+                        {/* DETALLES Y ACCIONES */}
+                        <div style={{ padding: esMovil ? '18px' : '26px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px', gap: '10px', flexDirection: esMovil ? 'column' : 'row' }}>
                             <div>
-                              <h3 style={{ margin: '0 0 6px 0', color: modoOscuro ? '#fff' : '#0f172a', fontSize: '1.25rem', fontWeight: '800' }}>{renderActual.titulo}</h3>
-                              <p style={{ margin: 0, fontSize: '0.9rem', color: modoOscuro ? '#9ca3af' : '#64748b', lineHeight: '1.5' }}>{renderActual.descripcion || 'Sin descripción adicional para este diseño.'}</p>
+                              <h3 style={{ margin: '0 0 6px 0', color: t.text, fontSize: '1.05rem', fontWeight: '700' }}>{renderActual.titulo}</h3>
+                              <p style={{ margin: 0, fontSize: '0.85rem', color: t.textMuted, lineHeight: '1.55' }}>{renderActual.descripcion || 'Sin descripción adicional para este diseño.'}</p>
                             </div>
 
                             {rolUsuario === 'admin' && (
-                              <button 
+                              <button
                                 onClick={() => eliminarProyecto(renderActual.id, renderActual.titulo)}
                                 title="Eliminar este render específico"
-                                style={{ backgroundColor: modoOscuro ? 'rgba(69, 10, 10, 0.6)' : '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: '700', whiteSpace: 'nowrap' }}
+                                className="mosh-btn"
+                                style={{ backgroundColor: PALETTE.dangerSoft, color: '#8A392E', border: 'none', borderRadius: '8px', padding: '10px 12px', minHeight: '40px', cursor: 'pointer', fontSize: '0.74rem', fontWeight: '700', width: esMovil ? '100%' : 'auto' }}
                               >
-                                🗑️ Borrar Render Actual
+                                Borrar render actual
                               </button>
                             )}
                           </div>
 
-                          {/* ÚNICO BOTÓN DE ESTADO / APROBACIÓN PARA TODO EL AMBIENTE */}
-                          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', background: modoOscuro ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '12px', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)' }}>
-                            <span style={{ fontSize: '0.8rem', fontWeight: '800', alignSelf: 'center', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estado del Ambiente:</span>
-                            <button 
-                              onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'Aprobado')}
-                              style={{ padding: '8px 16px', background: '#16a34a', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(22,163,74,0.3)' }}
-                            >
-                              ✓ Aprobar Ambiente
-                            </button>
-                            <button 
-                              onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'En revisión')}
-                              style={{ padding: '8px 16px', background: '#ca8a04', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem', boxShadow: '0 2px 6px rgba(202,138,4,0.3)' }}
-                            >
-                              ⏳ Marcar en Revisión
-                            </button>
+                          <div style={{ display: 'flex', gap: '8px', marginBottom: '22px', background: modoOscuro ? 'rgba(0,0,0,0.18)' : 'rgba(20,22,26,0.02)', padding: '12px', borderRadius: '10px', border: `1px solid ${t.borderSoft}`, flexDirection: esMovil ? 'column' : 'row', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: '700', color: t.textMuted, width: esMovil ? '100%' : 'auto' }}>Estado:</span>
+                            <div style={{ display: 'flex', gap: '8px', width: esMovil ? '100%' : 'auto' }}>
+                              <button
+                                onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'Aprobado')}
+                                className="mosh-btn"
+                                style={{ padding: '10px 12px', minHeight: '40px', background: PALETTE.moss, color: 'white', border: 'none', borderRadius: '7px', fontWeight: '700', cursor: 'pointer', fontSize: '0.78rem', flex: 1 }}
+                              >
+                                Aprobar
+                              </button>
+                              <button
+                                onClick={() => cambiarEstadoAmbiente(nombreAmbiente, 'En revisión')}
+                                className="mosh-btn"
+                                style={{ padding: '10px 12px', minHeight: '40px', background: PALETTE.ochre, color: 'white', border: 'none', borderRadius: '7px', fontWeight: '700', cursor: 'pointer', fontSize: '0.78rem', flex: 1 }}
+                              >
+                                En revisión
+                              </button>
+                            </div>
                           </div>
 
-                          {/* SECCIÓN DE COMENTARIOS GENERALES DEL AMBIENTE */}
-                          <div style={{ borderTop: modoOscuro ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '18px' }}>
-                            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.85rem', color: modoOscuro ? '#d1d5db' : '#4b5563', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: '800' }}>💬 Comentarios del Ambiente ({nombreAmbiente})</h4>
-                            
-                            <div style={{ background: modoOscuro ? 'rgba(0,0,0,0.25)' : '#f8fafc', padding: '12px 16px', borderRadius: '10px', minHeight: '40px', maxHeight: '120px', overflowY: 'auto', marginBottom: '12px', fontSize: '0.85rem', whiteSpace: 'pre-line', border: modoOscuro ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.04)', color: modoOscuro ? '#e2e8f0' : '#1e293b' }}>
-                              {renderActual.comentarios ? renderActual.comentarios : <span style={{ color: modoOscuro ? '#6b7280' : '#94a3b8' }}>No hay comentarios aún para este ambiente. Deja tus observaciones abajo.</span>}
+                          <div style={{ borderTop: `1px solid ${t.borderSoft}`, paddingTop: '18px' }}>
+                            <h4 style={{ margin: '0 0 10px 0', fontSize: '0.76rem', color: t.textMuted, fontWeight: '700' }}>Comentarios · {nombreAmbiente}</h4>
+
+                            <div className="mosh-scroll" style={{ background: modoOscuro ? 'rgba(0,0,0,0.2)' : '#F3F1EC', padding: '12px', borderRadius: '10px', minHeight: '40px', maxHeight: '110px', overflowY: 'auto', marginBottom: '12px', fontSize: '0.8rem', whiteSpace: 'pre-line', border: `1px solid ${t.borderSoft}`, color: t.text }}>
+                              {renderActual.comentarios ? renderActual.comentarios : <span style={{ color: t.textFaint }}>No hay comentarios aún. Deja tus observaciones abajo.</span>}
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                              <input 
-                                type="text" 
-                                placeholder={`Escribe un comentario para el ambiente ${nombreAmbiente}...`} 
+                            <div style={{ display: 'flex', gap: '8px', flexDirection: esMovil ? 'column' : 'row' }}>
+                              <input
+                                type="text"
+                                placeholder={`Comentar en ${nombreAmbiente}...`}
                                 value={textosComentarios[nombreAmbiente] || ''}
                                 onChange={(e) => setTextosComentarios({ ...textosComentarios, [nombreAmbiente]: e.target.value })}
-                                style={{ flex: 1, padding: '12px 14px', borderRadius: '10px', border: modoOscuro ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', background: modoOscuro ? 'rgba(255,255,255,0.05)' : '#fff', color: modoOscuro ? '#fff' : '#000', fontSize: '0.85rem', outline: 'none' }}
+                                className="mosh-input"
+                                style={{ flex: 1, padding: '12px 14px', minHeight: '44px', borderRadius: '9px', border: `1px solid ${t.border}`, background: t.field, color: t.text, fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box' }}
                               />
-                              <button 
+                              <button
                                 onClick={() => enviarComentarioAmbiente(nombreAmbiente, listaRenders)}
-                                style={{ padding: '12px 20px', background: modoOscuro ? '#ffffff' : '#111827', color: modoOscuro ? '#111827' : 'white', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+                                className="mosh-btn"
+                                style={{ padding: '12px 20px', minHeight: '44px', background: PALETTE.blueprint, color: '#F7F5F1', border: 'none', borderRadius: '9px', fontWeight: '700', cursor: 'pointer', fontSize: '0.84rem', width: esMovil ? '100%' : 'auto' }}
                               >
                                 Enviar
                               </button>
