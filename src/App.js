@@ -56,6 +56,37 @@ const GlobalStyles = ({ bgColor }) => (
       border-radius: 4px;
     }
 
+    /* --- Fondo ambiental: retícula técnica sutil (motivo "plano de arquitectura") --- */
+    .mosh-grid-dark {
+      background-image:
+        linear-gradient(rgba(91,133,179,0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(91,133,179,0.05) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
+    .mosh-grid-light {
+      background-image:
+        linear-gradient(rgba(47,93,138,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(47,93,138,0.045) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
+
+    /* --- Línea de acento con degradado, usada como firma visual del sistema --- */
+    .mosh-accent-top { position: relative; }
+    .mosh-accent-top::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 28px; right: 28px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, ${PALETTE.blueprintLight} 45%, ${PALETTE.blueprintLight} 55%, transparent);
+      opacity: 0.55;
+    }
+
+    /* --- Panel de cristal flotante reutilizable --- */
+    .mosh-glass {
+      backdrop-filter: blur(26px) saturate(150%);
+      -webkit-backdrop-filter: blur(26px) saturate(150%);
+    }
+
     /* --- Scrollbars invisibles, scroll funcional intacto --- */
     .mosh-scroll {
       scrollbar-width: none;
@@ -73,8 +104,8 @@ const GlobalStyles = ({ bgColor }) => (
     .mosh-btn { transition: filter 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease; }
     .mosh-btn:hover { filter: brightness(1.08); }
     .mosh-btn:active { transform: scale(0.96); }
-    .mosh-card { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
-    .mosh-card:hover { transform: translateY(-3px); }
+    .mosh-card { transition: transform 0.25s cubic-bezier(0.2,0.8,0.2,1), box-shadow 0.25s ease, border-color 0.25s ease; }
+    .mosh-card:hover { transform: translateY(-4px); box-shadow: 0 28px 60px rgba(47,93,138,0.22), 0 4px 14px rgba(0,0,0,0.18) !important; border-color: rgba(91,133,179,0.35) !important; }
     .mosh-icon-btn { transition: filter 0.15s ease, border-color 0.15s ease, transform 0.08s ease; }
     .mosh-icon-btn:hover { filter: brightness(1.15); border-color: ${PALETTE.blueprint} !important; }
     .mosh-icon-btn:active { transform: scale(0.92); }
@@ -253,6 +284,39 @@ function SkeletonAmbienteCard({ t, esMovil }) {
         <div className="mosh-skeleton" style={{ height: '38px', width: '100%' }} />
       </div>
     </div>
+  );
+}
+
+// ============================================================================
+// COMPONENTE: FONDO AMBIENTAL (logo desenfocado + viñeta + retícula técnica)
+// Mismo tratamiento visual en el login y en toda la app, para una identidad
+// coherente de principio a fin.
+// ============================================================================
+function FondoAmbiental({ modoOscuro }) {
+  return (
+    <>
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        backgroundImage: `url(${process.env.PUBLIC_URL}/LogotipoMosh-06.jpg.jpeg)`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        transform: 'scale(1.15)',
+        filter: `blur(60px) saturate(${modoOscuro ? '90%' : '70%'})`,
+        opacity: modoOscuro ? 0.22 : 0.10,
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 0,
+        background: modoOscuro
+          ? 'radial-gradient(ellipse at 50% 0%, rgba(47,93,138,0.14), transparent 60%), rgba(20,22,26,0.90)'
+          : 'radial-gradient(ellipse at 50% 0%, rgba(47,93,138,0.07), transparent 60%), rgba(247,245,241,0.93)',
+        pointerEvents: 'none',
+      }} />
+      <div className={modoOscuro ? 'mosh-grid-dark' : 'mosh-grid-light'} style={{
+        position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none',
+        maskImage: 'radial-gradient(ellipse at 50% 30%, black 40%, transparent 85%)',
+        WebkitMaskImage: 'radial-gradient(ellipse at 50% 30%, black 40%, transparent 85%)',
+      }} />
+    </>
   );
 }
 
@@ -637,24 +701,23 @@ function App() {
   };
 
   const panelStyle = {
-    background: t.surface, backdropFilter: 'blur(20px)',
-    padding: esMovil ? '22px 18px' : '36px', borderRadius: '18px',
-    boxShadow: t.shadow, border: `1px solid ${t.border}`
+    background: modoOscuro ? 'rgba(27,30,35,0.5)' : 'rgba(255,255,255,0.62)',
+    padding: esMovil ? '24px 20px' : '40px', borderRadius: '22px',
+    boxShadow: modoOscuro ? '0 24px 60px rgba(0,0,0,0.4)' : '0 24px 60px rgba(20,22,26,0.08)',
+    border: `1px solid ${t.border}`, position: 'relative'
   };
+  const panelClass = 'mosh-glass mosh-accent-top';
 
   // --- PANTALLA DE LOGIN ---
   if (!usuarioLogueado) {
     return (
       <div className="mosh-scope" style={{
         position: 'relative', display: 'flex', height: '100vh', justifyContent: 'center', alignItems: 'center',
-        backgroundImage: `url(${process.env.PUBLIC_URL}/LogotipoMosh-06.jpg.jpeg)`,
-        backgroundSize: 'cover', backgroundPosition: 'center',
         fontFamily: FONT_SANS, padding: '20px', overflow: 'hidden', ...skelVars
       }}>
         <GlobalStyles bgColor={t.bg} />
         <ToastContainer toasts={toasts} onClose={cerrarToast} />
-
-        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: modoOscuro ? 'rgba(20, 22, 26, 0.82)' : 'rgba(247, 245, 241, 0.86)', backdropFilter: 'blur(14px)' }}></div>
+        <FondoAmbiental modoOscuro={modoOscuro} />
 
         <button
           onClick={toggleTema}
@@ -665,17 +728,17 @@ function App() {
           {modoOscuro ? '☀︎' : '☾'}
         </button>
 
-        <form onSubmit={manejarLogin} style={{
+        <form onSubmit={manejarLogin} className="mosh-glass mosh-accent-top" style={{
           position: 'relative', zIndex: 10,
-          background: modoOscuro ? 'rgba(27, 30, 35, 0.78)' : 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(28px)',
+          background: modoOscuro ? 'rgba(23, 25, 30, 0.62)' : 'rgba(255, 255, 255, 0.68)',
           border: `1px solid ${t.border}`,
-          padding: '52px 34px', borderRadius: '22px', boxShadow: t.shadow,
+          padding: '56px 34px 44px', borderRadius: '26px',
+          boxShadow: modoOscuro ? '0 30px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset' : '0 30px 80px rgba(20,22,26,0.1), 0 0 0 1px rgba(255,255,255,0.6) inset',
           textAlign: 'center', width: '100%', maxWidth: '408px', color: t.text, boxSizing: 'border-box'
         }}>
-          <div style={{ width: '40px', height: '2px', background: PALETTE.blueprint, margin: '0 auto 22px' }}></div>
-          <h1 className="mosh-serif" style={{ margin: '0 0 6px', letterSpacing: '0.04em', fontWeight: '500', fontSize: '2rem', color: t.text }}>MOSH</h1>
-          <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: '36px', fontWeight: '500' }}>Arquitectura y Diseño — Portal de clientes</p>
+          <div style={{ width: '34px', height: '2px', background: `linear-gradient(90deg, transparent, ${PALETTE.blueprintLight})`, margin: '0 auto 20px' }}></div>
+          <h1 className="mosh-serif" style={{ margin: '0 0 6px', letterSpacing: '0.05em', fontWeight: '500', fontSize: '2.1rem', color: t.text }}>MOSH</h1>
+          <p style={{ fontSize: '0.78rem', color: t.textMuted, marginBottom: '38px', fontWeight: '500', letterSpacing: '0.01em' }}>Arquitectura y Diseño — Portal de clientes</p>
 
           {errorLogin && (
             <div style={{ backgroundColor: PALETTE.dangerSoft, color: '#7A2E24', padding: '13px 14px', borderRadius: '10px', fontSize: '0.83rem', marginBottom: '22px', fontWeight: '600', textAlign: 'left' }}>
@@ -701,7 +764,7 @@ function App() {
             />
           </div>
 
-          <button type="submit" disabled={cargandoLogin} className="mosh-btn" style={{ width: '100%', padding: '15px', backgroundColor: PALETTE.blueprint, color: '#F7F5F1', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.35)' }}>
+          <button type="submit" disabled={cargandoLogin} className="mosh-btn" style={{ width: '100%', padding: '15px', backgroundImage: `linear-gradient(135deg, ${PALETTE.blueprintLight}, ${PALETTE.blueprint})`, color: '#F7F5F1', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 14px 30px rgba(47,93,138,0.4)', letterSpacing: '0.01em' }}>
             {cargandoLogin ? 'Verificando…' : 'Acceder al portal'}
           </button>
         </form>
@@ -726,17 +789,8 @@ function App() {
       <GlobalStyles bgColor={t.bg} />
       <ToastContainer toasts={toasts} onClose={cerrarToast} />
 
-      {/* FONDO GLOBAL CON LOGOTIPO Y BLUR */}
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0,
-        backgroundImage: `url(${process.env.PUBLIC_URL}/LogotipoMosh-06.jpg.jpeg)`,
-        backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(34px)', opacity: modoOscuro ? 0.12 : 0.06, pointerEvents: 'none'
-      }}></div>
-
-      <div style={{
-        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 0,
-        backgroundColor: modoOscuro ? 'rgba(20, 22, 26, 0.88)' : 'rgba(247, 245, 241, 0.92)', pointerEvents: 'none'
-      }}></div>
+      {/* FONDO AMBIENTAL — mismo tratamiento del login, aplicado a toda la app */}
+      <FondoAmbiental modoOscuro={modoOscuro} />
 
       {/* LIGHTBOX MODAL */}
       {imagenZoom && (
@@ -783,14 +837,17 @@ function App() {
         {menuAbierto ? '✕' : '☰'}
       </button>
 
-      {/* SIDEBAR LATERAL IZQUIERDO */}
-      <aside style={{
-        position: 'fixed', top: 0, left: menuAbierto ? 0 : '-284px', width: '284px', height: '100vh', zIndex: 40,
-        backgroundColor: modoOscuro ? 'rgba(23, 25, 30, 0.97)' : 'rgba(255, 255, 255, 0.98)',
-        backdropFilter: 'blur(22px)', borderRight: `1px solid ${t.border}`,
+      {/* SIDEBAR LATERAL IZQUIERDO — panel de cristal flotante */}
+      <aside className="mosh-glass mosh-accent-top" style={{
+        position: 'fixed', top: esMovil ? 0 : '16px', bottom: esMovil ? 0 : '16px',
+        left: menuAbierto ? (esMovil ? 0 : '16px') : (esMovil ? '-100vw' : '-300px'),
+        width: esMovil ? '100vw' : '264px', height: esMovil ? '100vh' : 'auto', zIndex: 40,
+        background: modoOscuro ? 'rgba(23, 25, 30, 0.72)' : 'rgba(255, 255, 255, 0.78)',
+        border: `1px solid ${t.border}`,
+        borderRadius: esMovil ? 0 : '22px',
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '32px 20px', boxSizing: 'border-box',
-        transition: 'left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: menuAbierto ? '14px 0 36px rgba(0,0,0,0.35)' : 'none'
+        transition: 'left 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: menuAbierto ? (modoOscuro ? '0 30px 70px rgba(0,0,0,0.5)' : '0 30px 70px rgba(20,22,26,0.14)') : 'none'
       }}>
         <div>
           <div style={{ marginBottom: '38px', paddingLeft: '46px' }}>
@@ -854,7 +911,7 @@ function App() {
 
           {/* VISTA: TIMELINE / HISTORIAL DE ACTIVIDAD */}
           {vista === 'timeline' ? (
-            <div style={panelStyle}>
+            <div className={panelClass} style={panelStyle}>
               <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Historial y línea de tiempo del proyecto</h3>
               <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Registro transparente de avances, estados y comentarios recientes en los ambientes.</p>
 
@@ -884,7 +941,7 @@ function App() {
               )}
             </div>
           ) : rolUsuario === 'admin' && vista === 'gestionar_usuarios' ? (
-            <div style={panelStyle}>
+            <div className={panelClass} style={panelStyle}>
               <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Gestión de usuarios y roles</h3>
               <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Modifica el rol de cualquier usuario al instante usando el menú desplegable.</p>
 
@@ -913,7 +970,7 @@ function App() {
               </div>
             </div>
           ) : rolUsuario === 'admin' && vista === 'subir' ? (
-            <form onSubmit={agregarProyecto} style={panelStyle}>
+            <form onSubmit={agregarProyecto} className={panelClass} style={panelStyle}>
               <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Subir render, versión y ambiente</h3>
               <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Carga el contenido visual, selecciona su versión y asigna el ambiente.</p>
 
@@ -977,12 +1034,12 @@ function App() {
                 <textarea value={nuevaDesc} onChange={(e) => setNuevaDesc(e.target.value)} rows="3" className="mosh-input" style={{ ...inputStyle, resize: 'vertical', fontFamily: FONT_SANS }}></textarea>
               </div>
 
-              <button type="submit" disabled={guardandoProyecto} className="mosh-btn" style={{ backgroundColor: PALETTE.blueprint, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.3)', width: '100%', opacity: guardandoProyecto ? 0.75 : 1 }}>
+              <button type="submit" disabled={guardandoProyecto} className="mosh-btn" style={{ backgroundImage: `linear-gradient(135deg, ${PALETTE.blueprintLight}, ${PALETTE.blueprint})`, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 14px 30px rgba(47,93,138,0.35)', width: '100%', opacity: guardandoProyecto ? 0.75 : 1 }}>
                 {guardandoProyecto ? 'Guardando…' : 'Guardar y asignar render'}
               </button>
             </form>
           ) : rolUsuario === 'admin' && vista === 'crear_usuario' ? (
-            <form onSubmit={crearUsuarioNuevo} style={panelStyle}>
+            <form onSubmit={crearUsuarioNuevo} className={panelClass} style={panelStyle}>
               <h3 className="mosh-serif" style={{ marginTop: 0, color: t.text, fontSize: '1.5rem', fontWeight: '500' }}>Crear nuevo usuario o cliente</h3>
               <p style={{ fontSize: '0.85rem', color: t.textMuted, marginBottom: '26px' }}>Registra una nueva cuenta de acceso para un cliente o administrador.</p>
 
@@ -1004,7 +1061,7 @@ function App() {
                 </select>
               </div>
 
-              <button type="submit" disabled={creandoUsuario} className="mosh-btn" style={{ backgroundColor: PALETTE.blueprint, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 10px 24px rgba(47,93,138,0.3)', width: '100%', opacity: creandoUsuario ? 0.75 : 1 }}>
+              <button type="submit" disabled={creandoUsuario} className="mosh-btn" style={{ backgroundImage: `linear-gradient(135deg, ${PALETTE.blueprintLight}, ${PALETTE.blueprint})`, color: '#F7F5F1', padding: '15px 24px', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 14px 30px rgba(47,93,138,0.35)', width: '100%', opacity: creandoUsuario ? 0.75 : 1 }}>
                 {creandoUsuario ? 'Registrando…' : 'Registrar en Supabase'}
               </button>
             </form>
@@ -1094,7 +1151,7 @@ function App() {
                     const estadoAmbiente = renderActual.estado || 'En revisión';
 
                     return (
-                      <div key={nombreAmbiente} className="mosh-card" style={{ background: t.surface, backdropFilter: 'blur(20px)', borderRadius: '16px', overflow: 'hidden', boxShadow: t.shadow, border: `1px solid ${t.border}` }}>
+                      <div key={nombreAmbiente} className="mosh-card mosh-glass mosh-accent-top" style={{ background: modoOscuro ? 'rgba(27,30,35,0.5)' : 'rgba(255,255,255,0.62)', borderRadius: '20px', overflow: 'hidden', boxShadow: t.shadow, border: `1px solid ${t.border}` }}>
 
                         {/* CABECERA DE AMBIENTE */}
                         <div style={{ padding: '18px 18px 0 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
